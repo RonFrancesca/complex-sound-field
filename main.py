@@ -136,7 +136,7 @@ def main():
         
         for batch, (input_data, y_true) in enumerate(tqdm(train_loader)):
             
-            ipdb.set_trace()
+            #ipdb.set_trace()
             
             input_data = input_data.to(device) 
             optimizer.zero_grad(set_to_none=True)
