@@ -1,0 +1,34 @@
+{
+    "dataset": {
+        "log_dir": "/nas/home/fronchini/complex-sound-field/log",
+        "train_path": "/nas/home/fronchini/sound-field-neural-network/datasets/simulated_soundfields/train",
+        "val_path": "/nas/home/fronchini/sound-field-neural-network/datasets/simulated_soundfields/val",
+        "factor": 4,
+        "xSamples": 32,
+        "ySamples": 32
+    },
+    "training": {
+        "batch_size": 4,
+        "num_epochs": 2,
+        "num_steps_val": 20,
+        "num_steps_train": 50,
+        "session_id": 1,
+        "lr": 0.0001,
+        "loss": {
+            "valid_weight": 1,
+            "hole_weight": 12
+        },
+        "activation": "relu", 
+        "layer": "ct"
+    },
+    "evaluation": {
+        "min_mics": 5,
+        "max_mics": 65,
+        "step_mics": 5,
+        "num_comb": 1000
+    },
+    "visualization": {
+        "num_mics": 6,
+        "source": 0
+    }
+}
