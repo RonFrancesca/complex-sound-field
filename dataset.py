@@ -14,7 +14,7 @@ import copy
 import utils
 
 
-def generate_mask(height, width, channels, num_mics=6):
+def generate_mask(height, width, channels, num_mics=10):
     
     mask_slice = np.zeros((height*width), np.uint8) ### ???? if everything is cast to complex or everything is set to 0, need to multiply or not
     
@@ -35,12 +35,14 @@ def generate_mask(height, width, channels, num_mics=6):
 
     mask = np.repeat(mask_slice, channels, axis=2)
 
-    return mask
+    #stesso shape con tutti 1 oppure la levo #TODO
+    return mask 
 
 class SoundFieldDataset(Dataset):
     def __init__(
         self,
-        dataset_folder,
+        dataset_folder=None,
+        set_file_list=None,
         xSample=32, 
         ySample=32, 
         factor=4,
@@ -51,7 +53,17 @@ class SoundFieldDataset(Dataset):
         self.dataset_folder = dataset_folder
         self.freq = utils.get_frequencies()
         self.num_freq = len(self.freq)
-        self.soundfield_list = glob.glob(os.path.join(self.dataset_folder, "*.mat"))
+        
+        if dataset_folder is None and set_file_list is None:
+            print(f"Only one of those can be sett to None")
+            #TODO: Throw error
+            return
+            
+        if dataset_folder is None:
+            self.soundfield_list = set_file_list
+        else:
+            self.soundfield_list = glob.glob(os.path.join(self.dataset_folder, "*.mat"))
+        
         self.xSample = int(xSample)
         self.ySamples = int(ySample)
         self.factor = int(factor) 
@@ -68,7 +80,10 @@ class SoundFieldDataset(Dataset):
         
         f_response_complex = mat['FrequencyResponse'].astype(np.complex64)
         
-        f_response_complex = np.transpose(f_response_complex, (1, 0, 2)) # transpose (x, y room) -> plot
+        #f_response_complex = torch.from_numpy(f_response_complex)
+        
+        f_response_complex = np.transpose(f_response_complex, (1, 0, 2))
+        #f_response_complex = torch.transpose(f_response_complex, 0, 1) # transpose (x, y room) -> plot
         # plot
         
         sf_gt= f_response_complex[:, :, frequencies] # considering only 40 frequencies [32, 32, 40]
@@ -79,14 +94,19 @@ class SoundFieldDataset(Dataset):
         
 
         # Get mask samples (always the same mask so far)
+        #mask = torch.from_numpy(generate_mask(int(self.xSample/self.factor), int(self.ySamples/self.factor), self.num_freq))
         mask = generate_mask(int(self.xSample/self.factor), int(self.ySamples/self.factor), self.num_freq)
         
         # # preprocessing
         irregular_sf, mask = utils.preprocessing(self.factor, initial_sf, mask)
-        sf_masked = np.concatenate((irregular_sf, mask), axis=2) 
         
-        sf_masked = np.moveaxis(sf_masked, 2, 0) 
-        sf_gt = np.moveaxis(sf_gt, 2, 0)
+        irregular_sf = torch.from_numpy(irregular_sf)
+        mask = torch.from_numpy(mask)
+
+        sf_masked = torch.cat((irregular_sf, mask), dim=2) 
+        
+        sf_masked = torch.moveaxis(sf_masked, 2, 0) 
+        sf_gt = torch.moveaxis(torch.from_numpy(sf_gt), 2, 0)
 
         # Scale ground truth sound field (we'll see it later)
         #sf_gt = util.scale(sf_gt)

@@ -8,6 +8,9 @@ from complexPyTorch.complexFunctions import complex_upsample, complex_max_pool2d
 # conv2transpose instead of upsample and conv
 
 
+# self.padding = (kernel_size - 1) // 2
+
+
 def complex_leaky_relu(negative_slope, input):
     """
     Implementation of Complex-valued Leaky Rectified Linear Unit (LReLU)
@@ -66,9 +69,10 @@ class DecoderBlock(torch.nn.Module):
         
         self.layer = layer 
         self.bn = bn
+        self.out_ch = out_channels
         self.activation = activation
         self.upsampling = torch.nn.Upsample(scale_factor=2, mode='nearest')
-        self.conv = ComplexConv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size) #paddding = same -> get how, stride??
+        self.conv = ComplexConv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, padding=1) #paddding = same -> get how, stride??
         
         self.conv_tran = ComplexConvTranspose2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size)
         self.bn_c = ComplexBatchNorm2d(out_channels)
@@ -80,7 +84,7 @@ class DecoderBlock(torch.nn.Module):
             #ipdb.set_trace()
             # [1, 1024, 2, 2]
             x = complex_upsample(x, scale_factor=(2, 2)) 
-            x = torch.cat((x, enc), dim=1) 
+            x = torch.cat((x, enc), dim=1) #[1, 512, 4, 4]
             x = self.conv(x) #[1, 512, 2, 2] if K=3, [1, 512, 4, 4] if K=1
         
         elif self.layer == "ct": #conv transpose
@@ -103,7 +107,7 @@ class DecoderBlock(torch.nn.Module):
             x = complex_leaky_relu(0.2, x)
         
         elif self.activation == "prelu":
-            x = complex_prelu()
+            x = complex_prelu(self.out_ch) #TODO: 
         
         else:
             print("No activation function implemented") #TODO: Error
@@ -132,7 +136,7 @@ class ComplexUnet(torch.nn.Module):
         self.dec3 = DecoderBlock((256+128), 128, 1, self.activation, self.layer)
         self.dec4 = DecoderBlock((128+80), 80, 1, self.activation, self.layer, bn=False) 
         
-        #TODO: Should we keep this layer? no sigmoid as activation (was included in the original paper)
+        
         self.outputs = ComplexConv2d(80, 40, kernel_size=1)
     
     

@@ -2,7 +2,13 @@ import json
 import numpy as np
 import copy 
 import ipdb
+import torch
+import os
+import matplotlib.pyplot as plt
 
+dir = '/nas/home/fronchini/complex-sound-field/figures'
+ 
+ 
 def load_config(config_filepath):
     """ Load a session configuration from a JSON-formatted file.
 
@@ -54,9 +60,9 @@ def preprocessing(factor, sf, mask):
     # scaled_sf = scale(masked_sf) # normalizzare parte reale ed immaginaria separate
 
     # Upsampling no-scaled sound field and mask
-    irregular_sf, mask = upsampling(factor, masked_sf, mask) # irregular_sf shape (32, 32, 40), # mask shape (32, 32, 40)
+    irregular_sf, mask = upsampling(factor, masked_sf, mask) # irregular_sf shape (32, 32, 40), # mask shape (32, 32, 40
     
-
+    
     return irregular_sf, mask
 
 
@@ -90,17 +96,16 @@ def apply_mask(input_sf, mask):
     #masked_sfs = []
     #for sf, mk in zip(input_sfs, masks):
     
-    
-    
     aux_sf = copy.deepcopy(input_sf)
-    #ipdb.set_trace()
     aux_sf[mask==0] = 0
     
     for i in range(input_sf.shape[2]):
-        aux_max = aux_sf[:, :, i].max()
+        #aux_max = aux_sf[:, :, i].max()
+        aux_max = 0 
         input_sf[:, :, i][mask[:, :, i]==0] = aux_max
         #masked_sfs.append(sf)
-    return np.asarray(input_sf)
+
+    return input_sf
 
 def upsampling(up_factor, sf, mask):
     """ Upsamples sound fields and masks given a upsampling factor.
@@ -114,21 +119,17 @@ def upsampling(up_factor, sf, mask):
 
         """
 
-    # batch_sf_up = []
-    # batch_mask_up = []
-
-    #for sf, mask in zip(input_sfs, masks): #for each sample in the batch size (we do not care)
-    # sf_up = []
-    # mask_up = []
-    #ipdb.set_trace()
+    
     sf_up = []
+    
     sf = np.swapaxes(sf, 2, 0)
     mask = np.swapaxes(mask, 2, 0)
+    
     for sf_slice in sf:
         positions = np.repeat(range(1, sf_slice.shape[1]), up_factor-1) #positions in sf slice to put 1
-        sf_slice_up = np.insert(sf_slice, obj=positions,values=np.ones(len(positions)), axis=1)
-        sf_slice_up = np.transpose(np.insert(np.transpose(sf_slice_up),obj=positions,values=np.ones(len(positions)), axis=1))
-        sf_slice_up = np.pad(sf_slice_up, (0,up_factor-1),  mode='constant', constant_values=1)
+        sf_slice_up = np.insert(sf_slice, obj=positions, values=np.zeros(len(positions)), axis=1) 
+        sf_slice_up = np.transpose(np.insert(np.transpose(sf_slice_up),obj=positions,values=np.zeros(len(positions)), axis=1)) 
+        sf_slice_up = np.pad(sf_slice_up, (0,up_factor-1),  mode='constant', constant_values=0) 
         sf_slice_up = np.roll(sf_slice_up, (up_factor-1)//2, axis=0)
         sf_slice_up = np.roll(sf_slice_up, (up_factor-1)//2, axis=1)
         sf_up.append(sf_slice_up) #len(sf_up) = 40, sf_slice_up shape [32, 32]
@@ -152,5 +153,6 @@ def upsampling(up_factor, sf, mask):
 
     mask_up = np.asarray(mask_up)
     mask_up = np.swapaxes(mask_up, 2, 0)
+    
 
     return sf_up, mask_up
