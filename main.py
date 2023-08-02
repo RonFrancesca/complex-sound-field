@@ -1,5 +1,4 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] ='3'
 import torch
 import matplotlib.pyplot as plt
 import glob
@@ -94,11 +93,10 @@ def main():
     saved_model_path = os.path.join(dir_best_model, best_model_path)
     
 
-
     # Imports to select GPU
     os.environ['CUDA_ALLOW_GROWTH'] = 'True'
-    os.environ['CUDA_VISIBLE_DEVICES'] = "0,1"
-    device = "cuda:1" if torch.cuda.is_available() else "cpu"
+    os.environ['CUDA_VISIBLE_DEVICES'] = "0,1,2,3,4,5"
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
     print(f"Using {device} device")
 
     cfg_dataset = config["dataset"]
@@ -109,16 +107,17 @@ def main():
         sf_val = SoundFieldDataset(dataset_folder=cfg_dataset["train_path"], xSample=cfg_dataset["xSamples"], ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"])    
     else:
         dataset_filename_list = glob.glob(os.path.join(config["dataset"]["full_dataset_path"], "*.mat"))
-        
         sf_train_list, sf_val_list  = train_test_split(dataset_filename_list, train_size=0.75, test_size=0.25, random_state=42)
         
         sf_val = SoundFieldDataset(set_file_list=sf_val_list, xSample=cfg_dataset["xSamples"], ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"])
         sf_train = SoundFieldDataset(set_file_list=sf_train_list, xSample=cfg_dataset["xSamples"], ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"])
         
+    # get the testing set
+    sf_test = SoundFieldDataset(dataset_folder=cfg_dataset["test_path"], xSample=cfg_dataset["xSamples"], ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"])
         
      
     batch_size = 2 if config["run"]["test"] else config["training"]["batch_size"] 
-    print(f"batch size is: {batch_size}")
+    #print(f"batch size is: {batch_size}")
     
     
     train_loader = torch.utils.data.DataLoader(sf_train,
@@ -143,7 +142,7 @@ def main():
     
     # # Create optimizer + Scheduler
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=10, mode='min',threshold=0.00001)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=20, mode='min',threshold=0.00001)
     # need to consider this as well
 
     valid_weight = config["training"]["loss"]["valid_weight"]
@@ -189,7 +188,7 @@ def main():
         plt.title(f'Masked Sound Field, epoch: {best_epoch}')
         plt.tight_layout()
         
-        plt.subplot(132).set_title
+        plt.subplot(132)
         plt.imshow(np.real((y_pred.detach().cpu())), aspect='auto')
         plt.colorbar()
         plt.title(f'Sound Field Reconstructed: {best_epoch}')
@@ -260,7 +259,7 @@ def main():
             saved_model_path = saved_model_path.split('_')[0] + "_" + str(n_e)
             torch.save(model.state_dict(), saved_model_path)
             val_loss_best = val_loss
-            print(f'Model saved epoch{n_e}')
+            #print(f'Model saved epoch{n_e}')
             early_stop_counter = 0
         else:
             early_stop_counter +=1
@@ -284,6 +283,8 @@ def main():
             
             y_pred_tp = model_best(input_data_tp)
             plot_fig(input_data_tp, y_pred_tp, y_true_tp, n_epoch_model_saved)
+            
+    # Inferring
             
 
 if __name__ == '__main__':

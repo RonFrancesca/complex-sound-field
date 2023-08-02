@@ -80,7 +80,7 @@ class DecoderBlock(torch.nn.Module):
         
         self.layer = layer 
         self.bn = bn
-        self.activation = activation
+        self.activation = "lrelu"
         self.out_channels = out_channels
         self.upsampling = torch.nn.Upsample(scale_factor=2, mode='nearest')
         self.conv = Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, padding=1, dtype=torch.complex64) #paddding = same -> get how, stride??
@@ -134,7 +134,6 @@ class ComplexUnet(torch.nn.Module):
         self.activation = config["activation"]
         self.layer = config["layer"]
         
-        print("Network with pytorch")
         # Encoder
         self.enc1 = EncoderBlock(80, 128, kernel_size=3, activation=self.activation, bn=False) #is 5 instead of 3
         self.enc2 = EncoderBlock(128, 256, kernel_size=3, activation=self.activation)
