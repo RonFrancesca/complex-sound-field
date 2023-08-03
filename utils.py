@@ -7,6 +7,15 @@ import os
 import matplotlib.pyplot as plt
 
 dir = '/nas/home/fronchini/complex-sound-field/figures'
+
+def NMSE_fun(pred, gt):
+    gt = gt.flatten()
+    pred = pred.flatten()
+    tmp = (gt.flatten() - pred.flatten()) ** 2
+    
+    mse = np.mean(tmp)
+    return mse / np.mean(gt.flatten()**2)
+    
  
  
 def load_config(config_filepath):
