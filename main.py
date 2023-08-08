@@ -19,6 +19,12 @@ import random
 import utils
 import sfun_torch as sfun
 
+plt.rcParams.update({
+    "text.usetex": True,
+    "font.family": "sans-serif",
+    "font.sans-serif": ["Helvetica"],
+    'font.size': 20})
+
 
 BASE_DIR ='/nas/home/fronchini/complex-sound-field'
 
@@ -299,10 +305,11 @@ def main():
         evaluation_model = evaluation_model.to(device)
         
         results_dic = {
-            'nsme': []
+            'nmse': []
         }
         
         frequencies = utils.get_frequencies()
+        
 
         for batch, (input_data, y_true) in enumerate(tqdm(test_loader)):
             evaluation_model.eval()
@@ -311,14 +318,23 @@ def main():
                 y_true = y_true.to(device)
                 y_pred = evaluation_model(input_data)
                 mask = input_data[:, 40:, :, :]
-                for freq in frequencies:
-                    nmse = utils.NMSE_fun(y_pred[:, freq, :, :], y_true[:, freq, :, :])
-                    results_dic['nmse'].append(nmse)
+                nmse = utils.NMSE_fun(y_pred[0], y_true[0])
+                results_dic['nmse'].append(nmse)
     
-    # this nee to be done for every room and then averaged       
-    # plt.figure()
-    # plt.plot()
-    # save plot
+    average_dimension_1 = 10*np.log10(np.mean(results_dic['nmse'], axis=0))
+    
+    x_values = frequencies
+
+    plt.plot(x_values, average_dimension_1, 'k-o', label='Linea k-o')
+    
+    plt.xlabel('$f [Hz]$'), plt.ylabel('$NMSE [dB]$'), plt.title('$\text{NMSE estimated from simulated data}$')
+    plt.grid()
+
+    # Save the plot as a PNG image
+    plt.savefig('average_dB_plot.png')
+
+    # Show the plot (optional)
+    plt.show()
             
 
 if __name__ == '__main__':

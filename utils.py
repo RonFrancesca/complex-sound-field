@@ -9,14 +9,17 @@ import matplotlib.pyplot as plt
 dir = '/nas/home/fronchini/complex-sound-field/figures'
 
 def NMSE_fun(pred, gt):
-    gt = gt.flatten()
-    pred = pred.flatten()
-    tmp = (gt.flatten() - pred.flatten()) ** 2
     
-    mse = np.mean(tmp)
-    return mse / np.mean(gt.flatten()**2)
+    pred = pred.reshape(40, -1).cpu().numpy()
+    gt = gt.reshape(40, -1).cpu().numpy()
     
- 
+    num = np.sum(np.power(np.abs(np.abs(gt) - np.abs(pred)),2),axis=-1)
+    den = np.sum(np.power(np.abs(np.abs(gt)),2),axis=-1)
+    
+    nmse = num/den
+    return nmse
+
+   
  
 def load_config(config_filepath):
     """ Load a session configuration from a JSON-formatted file.
