@@ -70,7 +70,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', default='config/config.json', help='JSON-formatted file with configuration parameters')
     parser.add_argument('--best_model_path', default='ComplexUNet', help='JSON-formatted file with configuration parameters')
-    parser.add_argument('--mode', default='test', help='if testing or trainign')
+    parser.add_argument('--mode', default='train', help='if testing or trainign')
     
     args = parser.parse_args()
     
@@ -103,7 +103,7 @@ def main():
 
     # Imports to select GPU
     os.environ['CUDA_ALLOW_GROWTH'] = 'True'
-    os.environ['CUDA_VISIBLE_DEVICES'] = "0,1,2,3,4,5"
+    os.environ['CUDA_VISIBLE_DEVICES'] = "3"
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     print(f"Using {device} device")
 
@@ -145,6 +145,7 @@ def main():
     if mode == 'train': 
     
         # Load Model and hyperparams
+        
         model = sfun.ComplexUnet(config["training"]) 
         model = model.to(device)
         
@@ -186,7 +187,7 @@ def main():
             return running_loss/num_batches
         
         
-        def plot_fig(input_data, y_pred, y_true, best_epoch):
+        def plot_fig(input_data, y_pred, y_true):
             
             freq = 20
             
@@ -199,22 +200,22 @@ def main():
             plt.subplot(131)
             plt.imshow(np.real((input_data.detach().cpu())), aspect='auto')
             plt.colorbar()
-            plt.title(f'Masked Sound Field, epoch: {best_epoch}')
+            plt.title(f'Masked Sound Field')
             plt.tight_layout()
             
             plt.subplot(132)
             plt.imshow(np.real((y_pred.detach().cpu())), aspect='auto')
             plt.colorbar()
-            plt.title(f'Sound Field Reconstructed: {best_epoch}')
+            plt.title(f'Sound Field Reconstructed')
             plt.tight_layout()
             
             plt.subplot(133)
             plt.imshow(np.real((y_true.detach().cpu())), aspect='auto')
             plt.colorbar()
-            plt.title(f'Sound Field Ground Truth: {best_epoch}')
+            plt.title(f'Sound Field Ground Truth')
             plt.tight_layout()
             
-            writer.add_figure("Sound Field Generation", fig, best_epoch)
+            writer.add_figure("Sound Field Generation", fig)
             
 
         # # Validation Loop
@@ -267,10 +268,14 @@ def main():
             if n_e == 0:
                 val_loss_best = val_loss
                 early_stop_counter = 0
-                saved_model_path = saved_model_path + "_" + str(n_e)
+                #saved_model_path = saved_model_path + "_" + str(n_e)
+                saved_model_path = saved_model_path
+                
                 torch.save(model.state_dict(), saved_model_path)
             if n_e > 0 and val_loss < val_loss_best:
-                saved_model_path = saved_model_path.split('_')[0] + "_" + str(n_e)
+                #saved_model_path = saved_model_path.split('_')[0] + "_" + str(n_e)
+                
+                saved_model_path = saved_model_path
                 torch.save(model.state_dict(), saved_model_path)
                 val_loss_best = val_loss
                 #print(f'Model saved epoch{n_e}')
@@ -292,20 +297,21 @@ def main():
                 # n_s = np.random.randint(0, src_val.shape[0])
                 model_best = sfun.ComplexUnet(config["training"]).to(device)
                 model_best.load_state_dict(torch.load(os.path.join(BASE_DIR, 'models', saved_model_path)))
-                n_epoch_model_saved = saved_model_path.split('_')[1]
-                print(f"Model loaded at epoch: {n_epoch_model_saved}")
+                #n_epoch_model_saved = saved_model_path.split('_')[1]
+                #print(f"Model loaded at epoch: {n_epoch_model_saved}")
                 
                 y_pred_tp = model_best(input_data_tp)
-                plot_fig(input_data_tp, y_pred_tp, y_true_tp, n_epoch_model_saved)
+                plot_fig(input_data_tp, y_pred_tp, y_true_tp)
     else: 
         # inference time loop
         evaluation_model = sfun.ComplexUnet(config["training"])
         
-        evaluation_model.load_state_dict(torch.load("/nas/home/fronchini/complex-sound-field/models/2acti/ComplexUNet_570"))
+        evaluation_model.load_state_dict(torch.load("/nas/home/fronchini/complex-sound-field/models/test_1/ComplexUNet"))
         evaluation_model = evaluation_model.to(device)
         
         results_dic = {
-            'nmse': []
+            'nmse': [], 
+            'ssim': []
         }
         
         frequencies = utils.get_frequencies()
@@ -318,23 +324,41 @@ def main():
                 y_true = y_true.to(device)
                 y_pred = evaluation_model(input_data)
                 mask = input_data[:, 40:, :, :]
+                
                 nmse = utils.NMSE_fun(y_pred[0], y_true[0])
+                ssim_metric = utils.SSIM_fun(y_pred[0], y_true[0])
+                
                 results_dic['nmse'].append(nmse)
+                results_dic['ssim'].append(ssim_metric)
     
-    average_dimension_1 = 10*np.log10(np.mean(results_dic['nmse'], axis=0))
-    
-    x_values = frequencies
+        average_nsme = 10*np.log10(np.mean(results_dic['nmse'], axis=0))
+        average_ssim = np.mean(results_dic['ssim'], axis=0)
+            
+        x_values = frequencies
+        
+        tick_values = [30, 40, 50, 60, 70, 80, 90, 100, 200, 300]
 
-    plt.plot(x_values, average_dimension_1, 'k-o', label='Linea k-o')
-    
-    plt.xlabel('$f [Hz]$'), plt.ylabel('$NMSE [dB]$'), plt.title('$\text{NMSE estimated from simulated data}$')
-    plt.grid()
-
-    # Save the plot as a PNG image
-    plt.savefig('average_dB_plot.png')
-
-    # Show the plot (optional)
-    plt.show()
+        # calculate the NMSE
+        plt.figure(figsize=(14, 10))
+        plt.plot(x_values, average_nsme)
+        plt.xscale('log')
+        
+        plt.xticks(tick_values, tick_values)
+        
+        plt.xlabel('$f [Hz]$'), plt.ylabel('$NMSE [dB]$'), plt.title('$\text{NMSE estimated from simulated data}$')
+        plt.grid(which='both', linestyle='-', linewidth=0.5, color='gray')
+        plt.savefig('average_NMSE_10mics.png')
+        
+        # calculate the SSIM
+        plt.figure(figsize=(14, 10))
+        plt.plot(x_values, average_ssim)
+        plt.xscale('log')
+        
+        plt.xticks(tick_values, tick_values)
+        
+        plt.xlabel('$f [Hz]$'), plt.ylabel('$MSSIM $'), plt.title('$\text{MSSIM estimated from simulated data}$')
+        plt.grid(which='both', linestyle='-', linewidth=0.5, color='gray')
+        plt.savefig('average_SSIM_10mics.png')
             
 
 if __name__ == '__main__':

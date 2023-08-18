@@ -136,15 +136,15 @@ class ComplexUnet(torch.nn.Module):
         
         # Encoder
         self.enc1 = EncoderBlock(80, 128, kernel_size=3, activation=self.activation, bn=False) #is 5 instead of 3
-        self.enc2 = EncoderBlock(128, 256, kernel_size=3, activation=self.activation)
-        self.enc3 = EncoderBlock(256, 512, kernel_size=3, activation=self.activation)
-        self.enc4 = EncoderBlock(512, 1024, kernel_size=3, activation=self.activation)
+        self.enc2 = EncoderBlock(128, 256, kernel_size=3, activation=self.activation, bn=False)
+        self.enc3 = EncoderBlock(256, 512, kernel_size=3, activation=self.activation, bn=False)
+        self.enc4 = EncoderBlock(512, 1024, kernel_size=3, activation=self.activation, bn=False)
 
         # decoder
-        self.dec1 = DecoderBlock((1024+512), 512, 1, self.activation, self.layer) #TODO: kernel 1 otherwise it will bring them back to 2 cannot concat
-        self.dec2 = DecoderBlock((512+256), 256, 1, self.activation, self.layer)
-        self.dec3 = DecoderBlock((256+128), 128, 1, self.activation, self.layer)
-        self.dec4 = DecoderBlock((128+80), 80, 1, self.activation, self.layer, bn=False) 
+        self.dec1 = DecoderBlock((1024+512), 512, 3, self.activation, self.layer, bn=False) #TODO: kernel 1 otherwise it will bring them back to 2 cannot concat
+        self.dec2 = DecoderBlock((512+256), 256, 3, self.activation, self.layer, bn=False)
+        self.dec3 = DecoderBlock((256+128), 128, 3, self.activation, self.layer, bn=False)
+        self.dec4 = DecoderBlock((128+80), 80, 3, self.activation, self.layer, bn=False) 
         
         #TODO: Should we keep this layer? no sigmoid as activation (was included in the original paper)
         self.outputs = Conv2d(80, 40, kernel_size=1, dtype=torch.complex64)

@@ -5,6 +5,7 @@ import ipdb
 import torch
 import os
 import matplotlib.pyplot as plt
+from skimage.metrics import structural_similarity as ssim
 
 dir = '/nas/home/fronchini/complex-sound-field/figures'
 
@@ -18,6 +19,19 @@ def NMSE_fun(pred, gt):
     
     nmse = num/den
     return nmse
+
+def SSIM_fun(pred, gt):
+    
+    res = np.zeros((40, 1))
+    
+    pred = pred.reshape(40, -1).cpu().numpy() 
+    gt = gt.reshape(40, -1).cpu().numpy()
+    
+    for freq in range(pred.shape[0]):
+        data_range = np.abs(pred[freq, :]).max() - np.abs(pred[freq, :]).min()
+        res[freq] = ssim(np.abs(pred[freq]), np.abs(gt[freq]), data_range=data_range)
+    
+    return res
 
    
  

@@ -14,10 +14,10 @@
     },
     "training": {
         "batch_size": 32,
-        "num_epochs": 5000,
+        "num_epochs": 600,
         "num_steps_val": 20,
         "num_steps_train": 50,
-        "session_id": "2acti",
+        "session_id": "nobn",
         "lr": 0.001,
         "loss": {
             "valid_weight": 1,
