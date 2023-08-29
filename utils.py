@@ -51,6 +51,14 @@ def load_config(config_filepath):
     else:
         with config_file:
             return json.load(config_file)
+        
+def save_config(data, config_output_path):
+    
+    with open(config_output_path, 'w') as f:
+        json.dump(data, f, indent=4)
+    
+    print(f"Configuration file saved in {config_output_path}")
+    
 
 def get_frequencies():
     """Loads the frequency numbers found at 'util/frequencies.txt'.

@@ -31,16 +31,24 @@ class EncoderBlock(torch.nn.Module):
                 channel_in, 
                 out_channels, 
                 kernel_size, 
+                stride,
+                padding,
                 activation,
                 bn=True
             ):
         
         super(EncoderBlock, self).__init__()
-        self.bn = bn
-        self.activation = activation
+        
+        # convolutional layer config
         self.out_channels = out_channels
-        #TODO: the only way to have same dimension as the paper?
-        self.conv2d_c = Conv2d(channel_in, out_channels, kernel_size, stride=2, padding=1, dtype=torch.complex64) 
+        self.stride = stride
+        self.padding = padding
+        self.bn = bn
+        
+        # activation function
+        self.activation = activation
+        
+        self.conv2d_c = Conv2d(channel_in, out_channels, kernel_size, stride=stride, padding=padding, dtype=torch.complex64) 
         self.bn_c = ComplexBatchNorm2d(out_channels) #BatchNorm from pytorch do not support complex values
         
         
@@ -67,8 +75,10 @@ class DecoderBlock(torch.nn.Module):
                 in_channels,
                 out_channels, 
                 kernel_size, 
+                padding,
                 activation="relu",
-                layer="up",
+                up_layer="up",
+                scale_factor=2,
                 bn=True, 
             ):
         
@@ -78,33 +88,46 @@ class DecoderBlock(torch.nn.Module):
         # alternative conv2transpose, for artifacts could be the same since we are not working with images 
         #TODO: it is not implemented for complex values
         
-        self.layer = layer 
-        self.bn = bn
-        self.activation = "lrelu"
+        # conv config
+        self.in_channels = in_channels
         self.out_channels = out_channels
-        self.upsampling = torch.nn.Upsample(scale_factor=2, mode='nearest')
-        self.conv = Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, padding=1, dtype=torch.complex64) #paddding = same -> get how, stride??
+        self.ks = kernel_size
+        self.padding = padding
+        self.bn = bn
         
-        self.conv_tran = ConvTranspose2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, dtype=torch.complex64)
-        self.bn_c = ComplexBatchNorm2d(out_channels)
+        #upsampling layer
+        self.up_layer = up_layer 
+        self.scale_factor = scale_factor
+        
+        # activation function
+        self.activation = activation
+        
+        
+        
+        self.upsampling = torch.nn.Upsample(scale_factor=2, mode='nearest')
+        self.conv = Conv2d(in_channels=self.in_channels, out_channels=self.out_channels, kernel_size=self.ks, padding=self.padding, dtype=torch.complex64) #paddding = same -> get how, stride??
+        
+        self.conv_tran = ConvTranspose2d(in_channels=self.in_channels, out_channels=self.out_channels, kernel_size=kernel_size, dtype=torch.complex64)
+        self.bn_c = ComplexBatchNorm2d(self.out_channels)
         
         
     def forward(self, x, enc):    
         
-        if self.layer == "up":
-            x = complex_upsample(x, scale_factor=(2, 2)) 
+        # select upsampling layer
+        if self.up_layer == "up":
+            x = complex_upsample(x, scale_factor=(self.scale_factor, self.scale_factor)) 
             x = torch.cat((x, enc), dim=1) 
             x = self.conv(x) 
         
-        elif self.layer == "ct": #conv transpose
-            x = complex_upsample(x, scale_factor=(2, 2)) 
+        elif self.up_layer == "ct": #conv transpose
+            x = complex_upsample(x, scale_factor=(self.scale_factor, self.scale_factor)) 
             x = torch.cat((x, enc), dim=1) 
             x = self.conv_tran(x) 
         
         if self.bn:
             x = self.bn_c(x)
             
-        
+        # select activation function
         if self.activation == "relu":
             x = complex_relu(x) 
         
@@ -127,23 +150,37 @@ class ComplexUnet(torch.nn.Module):
                 ): 
         super(ComplexUnet, self).__init__()
         
-        self.activation = config["activation"]
-        self.layer = config["layer"]
+        # encoder configuration
+        self.enc_ks = config["encoder"]["kernel_size"]
+        self.enc_stride = config["encoder"]["stride"]
+        self.enc_padding = config["encoder"]["padding"]
+        self.enc_acti = config["encoder"]["activation"]
+        
+        # decoder configuration
+        self.dec_ks = config["decoder"]["kernel_size"]
+        self.dec_padding = config["decoder"]["padding"]
+        self.dec_acti = config["decoder"]["activation"]
+        self.up_layer = config["decoder"]["up_layer"]
+        self.scale_factor = config["decoder"]["scale_factor"]
+    
+        # last output layer configuration
+        self.output_ks = config["output"]["kernel_size"]
+    
         
         # Encoder
-        self.enc1 = EncoderBlock(80, 128, kernel_size=3, activation=self.activation, bn=False) #is 5 instead of 3
-        self.enc2 = EncoderBlock(128, 256, kernel_size=3, activation=self.activation)
-        self.enc3 = EncoderBlock(256, 512, kernel_size=3, activation=self.activation)
-        self.enc4 = EncoderBlock(512, 1024, kernel_size=3, activation=self.activation)
+        self.enc1 = EncoderBlock(80, 128, kernel_size=self.enc_ks, stride=self.enc_stride, padding=self.enc_padding, activation=self.enc_acti, bn=False) #is 5 instead of 3
+        self.enc2 = EncoderBlock(128, 256, kernel_size=self.enc_ks, stride=self.enc_stride, padding=self.enc_padding, activation=self.enc_acti)
+        self.enc3 = EncoderBlock(256, 512, kernel_size=self.enc_ks, stride=self.enc_stride, padding=self.enc_padding, activation=self.enc_acti)
+        self.enc4 = EncoderBlock(512, 1024, kernel_size=self.enc_ks, stride=self.enc_stride, padding=self.enc_padding, activation=self.enc_acti)
 
         # decoder
-        self.dec1 = DecoderBlock((1024+512), 512, 3, self.activation, self.layer) 
-        self.dec2 = DecoderBlock((512+256), 256, 3, self.activation, self.layer)
-        self.dec3 = DecoderBlock((256+128), 128, 3, self.activation, self.layer)
-        self.dec4 = DecoderBlock((128+80), 80, 3, self.activation, self.layer, bn=False) 
+        self.dec1 = DecoderBlock((1024+512), 512, kernel_size=self.dec_ks, padding=self.dec_padding, activation=self.dec_acti, up_layer=self.up_layer, scale_factor=self.scale_factor) 
+        self.dec2 = DecoderBlock((512+256), 256, kernel_size=self.dec_ks,  padding=self.dec_padding, activation=self.dec_acti, up_layer=self.up_layer, scale_factor=self.scale_factor)
+        self.dec3 = DecoderBlock((256+128), 128, kernel_size=self.dec_ks,  padding=self.dec_padding, activation=self.dec_acti, up_layer=self.up_layer, scale_factor=self.scale_factor)
+        self.dec4 = DecoderBlock((128+80), 80, kernel_size=self.dec_ks,  padding=self.dec_padding, activation=self.dec_acti, up_layer=self.up_layer, scale_factor=self.scale_factor, bn=False) 
         
         #TODO: Should we keep this layer? no sigmoid as activation (was included in the original paper)
-        self.outputs = Conv2d(80, 40, kernel_size=1, dtype=torch.complex64)
+        self.outputs = Conv2d(80, 40, kernel_size=self.output_ks, dtype=torch.complex64)
     
     
     def forward(self, x):

@@ -15,16 +15,28 @@
     "training": {
         "batch_size": 32,
         "num_epochs": 600,
-        "num_steps_val": 20,
-        "num_steps_train": 50,
         "session_id": "our_random_masks",
         "lr": 0.001,
         "loss": {
             "valid_weight": 1,
             "hole_weight": 12
         },
-        "activation": "relu", 
-        "layer": "up"
+        "encoder": {
+            "activation": "relu", 
+            "kernel_size": 3, 
+            "stride": 2,
+            "padding": 1
+        },
+        "decoder": {
+            "activation": "lrelu", 
+            "kernel_size": 3, 
+            "padding": 1,
+            "up_layer": "up", 
+            "scale_factor": 2
+        },
+        "output": {
+            "kernel_size": 1
+        }
     },
     "evaluation": {
         "min_mics": 5,

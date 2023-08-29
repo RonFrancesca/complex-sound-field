@@ -92,7 +92,6 @@ def main():
 
     early_stop_patience = 100
     epoch_to_plot = 2  # Plot evey epoch_to_plot epochs
-    #val_perc=0.2
     current_time = str(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
 
     # Open SummaryWriter for Tensorboard
@@ -101,10 +100,14 @@ def main():
     os.makedirs(dir_best_model, exist_ok=True)
     saved_model_path = os.path.join(dir_best_model, best_model_path)
     
+    
+    # save configuration file into model folder
+    utils.save_config(config, os.path.join(dir_best_model, 'config.json'))
+    
 
     # Imports to select GPU
     os.environ['CUDA_ALLOW_GROWTH'] = 'True'
-    os.environ['CUDA_VISIBLE_DEVICES'] = "2"
+    os.environ['CUDA_VISIBLE_DEVICES'] = "3"
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     print(f"Using {device} device")
     torch.cuda.empty_cache()
@@ -185,7 +188,7 @@ def main():
                 # Backpropagation
                 loss.backward()
                 optimizer.step()
-                running_loss += loss.item()
+                running_loss += loss.detach().item()
             
             return running_loss/num_batches
         
@@ -244,7 +247,7 @@ def main():
                 
                     # get only one random
                     loss = soundfield_loss(mask, y_true, y_pred, valid_weight, hole_weight, device)
-                    running_loss += loss.item()
+                    running_loss += loss.detach().item()
                     
                     
                     input_data_to_plot = input_data
