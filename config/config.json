@@ -17,7 +17,7 @@
         "num_epochs": 600,
         "num_steps_val": 20,
         "num_steps_train": 50,
-        "session_id": "nobn",
+        "session_id": "our_random_masks",
         "lr": 0.001,
         "loss": {
             "valid_weight": 1,

@@ -15,6 +15,7 @@ torch.backends.cudnn.benchmark = True
 print(torch.__version__)
 from dataset import SoundFieldDataset
 import random
+import gc
 
 import utils
 import sfun_torch as sfun
@@ -86,7 +87,7 @@ def main():
     config = utils.load_config(config_path)
     print('Loaded configuration from: %s' % config_path)
     
-    epochs = 3 if config["run"]["test"] else config["training"]["num_epochs"]
+    epochs = 4 if config["run"]["test"] else config["training"]["num_epochs"]
     lr = config["training"]["lr"]
 
     early_stop_patience = 100
@@ -103,9 +104,11 @@ def main():
 
     # Imports to select GPU
     os.environ['CUDA_ALLOW_GROWTH'] = 'True'
-    os.environ['CUDA_VISIBLE_DEVICES'] = "3"
+    os.environ['CUDA_VISIBLE_DEVICES'] = "2"
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     print(f"Using {device} device")
+    torch.cuda.empty_cache()
+    gc.collect()
 
     cfg_dataset = config["dataset"]
     batch_size = 2 if config["run"]["test"] else config["training"]["batch_size"] 
@@ -115,7 +118,7 @@ def main():
     if mode == 'train':
         if config["run"]["test"] == 1:
             sf_train = SoundFieldDataset(dataset_folder=cfg_dataset["train_path"], xSample=cfg_dataset["xSamples"], ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"])
-            sf_val = SoundFieldDataset(dataset_folder=cfg_dataset["train_path"], xSample=cfg_dataset["xSamples"], ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"])    
+            sf_val = SoundFieldDataset(dataset_folder=cfg_dataset["val_path"], xSample=cfg_dataset["xSamples"], ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"])    
         else:
             dataset_filename_list = glob.glob(os.path.join(config["dataset"]["full_dataset_path"], "*.mat"))
             sf_train_list, sf_val_list  = train_test_split(dataset_filename_list, train_size=0.75, test_size=0.25, random_state=42)
@@ -304,10 +307,16 @@ def main():
                 plot_fig(input_data_tp, y_pred_tp, y_true_tp)
     else: 
         # inference time loop
-        evaluation_model = sfun.ComplexUnet(config["training"])
         
-        evaluation_model.load_state_dict(torch.load("/nas/home/fronchini/complex-sound-field/models/test_1/ComplexUNet"))
-        evaluation_model = evaluation_model.to(device)
+        model = sfun.ComplexUnet(config["training"])
+        evaluation_folder_path = '/nas/home/fronchini/complex-sound-field/models/nobn/'
+        evaluation_model_path = os.path.join(evaluation_folder_path, 'ComplexUNet')
+        results_eval_path = os.path.join(evaluation_folder_path, 'results')
+        os.makedirs(results_eval_path, exist_ok=True)
+        num_mics = 10
+        
+        model.load_state_dict(torch.load(evaluation_model_path, map_location='cuda:0'))
+        model = model.to(device)
         
         results_dic = {
             'nmse': [], 
@@ -318,11 +327,11 @@ def main():
         
 
         for batch, (input_data, y_true) in enumerate(tqdm(test_loader)):
-            evaluation_model.eval()
+            model.eval()
             with torch.no_grad():
                 input_data = input_data.to(device)
                 y_true = y_true.to(device)
-                y_pred = evaluation_model(input_data)
+                y_pred = model(input_data)
                 mask = input_data[:, 40:, :, :]
                 
                 nmse = utils.NMSE_fun(y_pred[0], y_true[0])
@@ -330,9 +339,18 @@ def main():
                 
                 results_dic['nmse'].append(nmse)
                 results_dic['ssim'].append(ssim_metric)
+            
     
         average_nsme = 10*np.log10(np.mean(results_dic['nmse'], axis=0))
+        # save nsme
+        filename_path = os.path.join(results_eval_path, f'nmse_complex_{num_mics}.npy')
+        np.save(filename_path, average_nsme, allow_pickle=False)
+        
+
         average_ssim = np.mean(results_dic['ssim'], axis=0)
+        #save nsme
+        filename_path = os.path.join(results_eval_path ,f'ssim_complex_{num_mics}.npy')
+        np.save(filename_path, average_nsme, allow_pickle=False)
             
         x_values = frequencies
         
@@ -347,7 +365,7 @@ def main():
         
         plt.xlabel('$f [Hz]$'), plt.ylabel('$NMSE [dB]$'), plt.title('$\text{NMSE estimated from simulated data}$')
         plt.grid(which='both', linestyle='-', linewidth=0.5, color='gray')
-        plt.savefig('average_NMSE_10mics.png')
+        plt.savefig(os.path.join(results_eval_path, f'average_NMSE_{num_mics}.png'))
         
         # calculate the SSIM
         plt.figure(figsize=(14, 10))
@@ -358,7 +376,7 @@ def main():
         
         plt.xlabel('$f [Hz]$'), plt.ylabel('$MSSIM $'), plt.title('$\text{MSSIM estimated from simulated data}$')
         plt.grid(which='both', linestyle='-', linewidth=0.5, color='gray')
-        plt.savefig('average_SSIM_10mics.png')
+        plt.savefig(os.path.join(results_eval_path, f'average_SSIM_{num_mics}mics.png'))
             
 
 if __name__ == '__main__':

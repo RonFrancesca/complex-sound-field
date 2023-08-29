@@ -92,18 +92,14 @@ class DecoderBlock(torch.nn.Module):
     def forward(self, x, enc):    
         
         if self.layer == "up":
-            #ipdb.set_trace()
-            # [1, 1024, 2, 2]
             x = complex_upsample(x, scale_factor=(2, 2)) 
             x = torch.cat((x, enc), dim=1) 
-            x = self.conv(x) #[1, 512, 2, 2] if K=3, [1, 512, 4, 4] if K=1
+            x = self.conv(x) 
         
         elif self.layer == "ct": #conv transpose
-            # K=3, K=1
-            # [1, 1024, 2, 2], 1, 1024, 2, 2]
-            x = complex_upsample(x, scale_factor=(2, 2)) # [1, 1024, 4, 4], [1, 1024, 4,4]
-            x = torch.cat((x, enc), dim=1) # [1, 1536, 4, 4], [1, 1536, 4, 4]
-            x = self.conv_tran(x) # [1, 512, 6, 6], [1, 512, 4, 4]
+            x = complex_upsample(x, scale_factor=(2, 2)) 
+            x = torch.cat((x, enc), dim=1) 
+            x = self.conv_tran(x) 
         
         if self.bn:
             x = self.bn_c(x)
@@ -136,14 +132,14 @@ class ComplexUnet(torch.nn.Module):
         
         # Encoder
         self.enc1 = EncoderBlock(80, 128, kernel_size=3, activation=self.activation, bn=False) #is 5 instead of 3
-        self.enc2 = EncoderBlock(128, 256, kernel_size=3, activation=self.activation, bn=False)
-        self.enc3 = EncoderBlock(256, 512, kernel_size=3, activation=self.activation, bn=False)
-        self.enc4 = EncoderBlock(512, 1024, kernel_size=3, activation=self.activation, bn=False)
+        self.enc2 = EncoderBlock(128, 256, kernel_size=3, activation=self.activation)
+        self.enc3 = EncoderBlock(256, 512, kernel_size=3, activation=self.activation)
+        self.enc4 = EncoderBlock(512, 1024, kernel_size=3, activation=self.activation)
 
         # decoder
-        self.dec1 = DecoderBlock((1024+512), 512, 3, self.activation, self.layer, bn=False) #TODO: kernel 1 otherwise it will bring them back to 2 cannot concat
-        self.dec2 = DecoderBlock((512+256), 256, 3, self.activation, self.layer, bn=False)
-        self.dec3 = DecoderBlock((256+128), 128, 3, self.activation, self.layer, bn=False)
+        self.dec1 = DecoderBlock((1024+512), 512, 3, self.activation, self.layer) 
+        self.dec2 = DecoderBlock((512+256), 256, 3, self.activation, self.layer)
+        self.dec3 = DecoderBlock((256+128), 128, 3, self.activation, self.layer)
         self.dec4 = DecoderBlock((128+80), 80, 3, self.activation, self.layer, bn=False) 
         
         #TODO: Should we keep this layer? no sigmoid as activation (was included in the original paper)

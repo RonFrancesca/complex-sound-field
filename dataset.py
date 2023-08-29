@@ -14,12 +14,10 @@ import copy
 import utils
 
 
-def generate_mask(height, width, channels, num_mics=10):
+def generate_mask(height, width, channels, num_mics=None):
     
-    mask_slice = np.zeros((height*width), np.uint8) ### ???? if everything is cast to complex or everything is set to 0, need to multiply or not
     
-    # mask_slice = torch.tensor(np.zeros((height*width), np.uint8)) # ??
-    # if elementwise element do not change -> ok esempio Luca is ok
+    mask_slice = np.zeros((height*width), np.uint8) 
     
     # test
 
@@ -95,7 +93,12 @@ class SoundFieldDataset(Dataset):
 
         # Get mask samples (always the same mask so far)
         #mask = torch.from_numpy(generate_mask(int(self.xSample/self.factor), int(self.ySamples/self.factor), self.num_freq))
-        mask = generate_mask(int(self.xSample/self.factor), int(self.ySamples/self.factor), self.num_freq)
+        
+        num_mics_list = [5, 15, 35, 55]
+        num_mics = random.choice(num_mics_list)
+        
+        mask = generate_mask(int(self.xSample/self.factor), int(self.ySamples/self.factor), self.num_freq, num_mics)
+        #print(f"Generated random mask with {num_mics}")
         
         # # preprocessing
         irregular_sf, mask = utils.preprocessing(self.factor, initial_sf, mask)
