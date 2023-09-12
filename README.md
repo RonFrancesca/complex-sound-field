@@ -1,3 +1,4 @@
-# complex-sound-field
+# ROOM TRANSFER FUNCTION RECONSTRUCTION USING COMPLEX-VALUED NEURAL
+NETWORKS
 
-Shit related to code to be added
+
