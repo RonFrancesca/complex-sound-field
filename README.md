@@ -1,4 +1,2 @@
-# ROOM TRANSFER FUNCTION RECONSTRUCTION USING COMPLEX-VALUED NEURAL
-NETWORKS
-
+# Room transfer function reconstruction using complex-valued neural networks
 
