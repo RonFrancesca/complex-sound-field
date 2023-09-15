@@ -1,38 +1,42 @@
 {
     "run": {
-        "test": 0
+        "test": 0,
+         "gpu": "5"
     },
     "dataset": {
-        "log_dir": "/nas/home/fronchini/complex-sound-field/log/",
+        "log_dir": "/nas/home/lcomanducci/cxz/SR_ICASSP/complex-sound-field/log/",
         "full_dataset_path": "/nas/home/fronchini/complex-sound-field/dataset",
         "train_path": "/nas/home/fronchini/sound-field-neural-network/datasets/simulated_soundfields/train",
         "test_path": "/nas/home/fronchini/complex-sound-field/dataset/test_set",
         "val_path": "/nas/home/fronchini/sound-field-neural-network/datasets/simulated_soundfields/val",
         "factor": 4,
         "xSamples": 32,
-        "ySamples": 32
+        "ySamples": 32,
+        "do_normalize": false
     },
     "training": {
-        "batch_size": 32,
+        "batch_size": 16,
         "num_epochs": 600,
-        "session_id": "our_random_masks",
+        "session_id": "multi_mic_l1_loss_no_norm_stage3",
         "lr": 0.001,
         "loss": {
             "valid_weight": 1,
             "hole_weight": 12
         },
         "encoder": {
-            "activation": "relu", 
+            "activation": "prelu",
             "kernel_size": 3, 
             "stride": 2,
-            "padding": 1
+            "padding": 1,
+            "batch_norm": true
         },
         "decoder": {
-            "activation": "lrelu", 
+            "activation": "prelu",
             "kernel_size": 3, 
             "padding": 1,
             "up_layer": "up", 
-            "scale_factor": 2
+            "scale_factor": 2,
+            "batch_norm": true
         },
         "output": {
             "kernel_size": 1
