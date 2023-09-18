@@ -1,20 +1,19 @@
+"""
+Training script
+"""
 import os
 import torch
 import matplotlib.pyplot as plt
 import glob
 import numpy as np
-#import params
 import argparse
-import pyroomacoustics as pra
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 import datetime
-# import network_lib_torch
 from torch.utils.tensorboard import SummaryWriter
 torch.backends.cudnn.benchmark = True
 print(torch.__version__)
 from dataset import SoundFieldDataset
-import random
 import gc
 
 import utils
@@ -26,59 +25,38 @@ plt.rcParams.update({
     "font.sans-serif": ["Helvetica"],
     'font.size': 20})
 
+BASE_DIR = ''
 
-BASE_DIR ='/nas/home/fronchini/complex-sound-field'
+def loss_valid(mask, y_true, y_pred,device):
+    return torch.nn.L1Loss()(mask * y_true, mask * y_pred)
 
-#mask tutto di 1 e provo a ricostruire il sound field reconstruction
+def loss_hole(mask, y_true, y_pred,device):
+   return  torch.nn.L1Loss()((1 - mask) * y_true, (1 - mask) * y_pred)
 
-
-#TODO: does it make sense? 
-def l1(y_true, y_pred):
-        """Calculates the L1.
-
-        Args:
-            y_true: torch tensor
-            y_pred: torch tensor
-
-        Returns: torch tensor
-        """
-        #ipdb.set_trace()
-        return torch.mean(torch.abs(y_pred - y_true)) 
-        #TODO: is the same as axes in Keras, l1-loss di torch
-        #TODO: considering only the magnitude and not the phase
-        
-
-def loss_valid(mask, y_true, y_pred):
-    return l1(mask * y_true, mask * y_pred)
-
-def loss_hole(mask, y_true, y_pred):
-    return l1((1-mask) * y_true, (1-mask) * y_pred)
-    
 
 def soundfield_loss(mask, y_true, y_pred, valid_weight, hole_weight, device):
-   
     y_true = y_true.to(device)
-    
-    valid_loss = loss_valid(mask, y_true, y_pred)
-    hole_loss = loss_hole(mask, y_true, y_pred)
 
-    loss_val = valid_weight*valid_loss + hole_weight*hole_loss
+    valid_loss = loss_valid(mask, y_true, y_pred,device)
+    hole_loss = loss_hole(mask, y_true, y_pred,device)
+
+    loss_val = valid_weight * valid_loss + hole_weight * hole_loss
 
     return loss_val
 
-def main():
 
+def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default='config/config.json', help='JSON-formatted file with configuration parameters')
-    parser.add_argument('--best_model_path', default='ComplexUNet', help='JSON-formatted file with configuration parameters')
-    parser.add_argument('--mode', default='train', help='if testing or trainign')
-    
+    parser.add_argument('--config', default='config/config.json',
+                        help='JSON-formatted file with configuration parameters')
+    parser.add_argument('--best_model_path', default='ComplexUNet',
+                        help='Name of the best-performing saved model')
     args = parser.parse_args()
-    
+
     config_path = args.config
     best_model_path = args.best_model_path
     mode = args.mode
-    
+
     # Load configuration
     if not os.path.exists(config_path):
         print('Error: No configuration file present at specified path.')
@@ -86,7 +64,7 @@ def main():
 
     config = utils.load_config(config_path)
     print('Loaded configuration from: %s' % config_path)
-    
+
     epochs = 4 if config["run"]["test"] else config["training"]["num_epochs"]
     lr = config["training"]["lr"]
 
@@ -99,288 +77,195 @@ def main():
     dir_best_model = os.path.join(BASE_DIR, 'models', config["training"]["session_id"])
     os.makedirs(dir_best_model, exist_ok=True)
     saved_model_path = os.path.join(dir_best_model, best_model_path)
-    
-    
+
     # save configuration file into model folder
     utils.save_config(config, os.path.join(dir_best_model, 'config.json'))
-    
 
     # Imports to select GPU
     os.environ['CUDA_ALLOW_GROWTH'] = 'True'
-    os.environ['CUDA_VISIBLE_DEVICES'] = "3"
+    os.environ['CUDA_VISIBLE_DEVICES'] = config["run"]["gpu"]
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     print(f"Using {device} device")
-    torch.cuda.empty_cache()
-    gc.collect()
 
     cfg_dataset = config["dataset"]
-    batch_size = 2 if config["run"]["test"] else config["training"]["batch_size"] 
+    batch_size = 2 if config["run"]["test"] else config["training"]["batch_size"]
     test_batch_size = 1
-    
+    do_normalize = config["dataset"]["do_normalize"]
+
+
     # load dataset
     if mode == 'train':
         if config["run"]["test"] == 1:
-            sf_train = SoundFieldDataset(dataset_folder=cfg_dataset["train_path"], xSample=cfg_dataset["xSamples"], ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"])
-            sf_val = SoundFieldDataset(dataset_folder=cfg_dataset["val_path"], xSample=cfg_dataset["xSamples"], ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"])    
+            sf_train = SoundFieldDataset(dataset_folder=cfg_dataset["train_path"], xSample=cfg_dataset["xSamples"],
+                                         ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"],do_normalize=do_normalize)
+            sf_val = SoundFieldDataset(dataset_folder=cfg_dataset["val_path"], xSample=cfg_dataset["xSamples"],
+                                       ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"],do_normalize=do_normalize)
         else:
             dataset_filename_list = glob.glob(os.path.join(config["dataset"]["full_dataset_path"], "*.mat"))
-            sf_train_list, sf_val_list  = train_test_split(dataset_filename_list, train_size=0.75, test_size=0.25, random_state=42)
-        
-            sf_val = SoundFieldDataset(set_file_list=sf_val_list, xSample=cfg_dataset["xSamples"], ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"])
-            sf_train = SoundFieldDataset(set_file_list=sf_train_list, xSample=cfg_dataset["xSamples"], ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"])
-        
+            sf_train_list, sf_val_list = train_test_split(dataset_filename_list, train_size=0.75, test_size=0.25,
+                                                          random_state=42)
+
+            sf_val = SoundFieldDataset(set_file_list=sf_val_list, xSample=cfg_dataset["xSamples"],
+                                       ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"],do_normalize=do_normalize)
+            sf_train = SoundFieldDataset(set_file_list=sf_train_list, xSample=cfg_dataset["xSamples"],
+                                         ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"],do_normalize=do_normalize)
+
         train_loader = torch.utils.data.DataLoader(sf_train,
-                shuffle=True, 
-                num_workers=4, 
-                batch_size=batch_size) ##2 number of workers
-    
-        val_loader = torch.utils.data.DataLoader(sf_val, 
-                shuffle=True, 
-                num_workers=4,  
-                batch_size=batch_size) ##2 number of workers  
-        
-    else:
-        sf_test = SoundFieldDataset(dataset_folder=cfg_dataset["test_path"], xSample=cfg_dataset["xSamples"], ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"])
+                                                   shuffle=True,
+                                                   num_workers= torch.cuda.device_count() *4,
+                                                   batch_size=batch_size,
+                                                   pin_memory=True)  ##2 number of workers
 
-        test_loader = torch.utils.data.DataLoader(sf_test, 
-                shuffle=False, 
-                num_workers=4,  ## ??
-                batch_size=test_batch_size) ##2 number of workers  
-     
-    
-    if mode == 'train': 
-    
-        # Load Model and hyperparams
-        
-        model = sfun.ComplexUnet(config["training"]) 
-        model = model.to(device)
-        
-        def count_parameters(model):
-            return sum(p.numel() for p in model.parameters() if p.requires_grad)
-        print('Model parameters-->'+str(count_parameters(model)))
-        
-        count_parameters(model)
-        
-        # # Create optimizer + Scheduler
-        optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=20, mode='min',threshold=0.00001)
-        # need to consider this as well
+        val_loader = torch.utils.data.DataLoader(sf_val,
+                                                 shuffle=True,
+                                                 num_workers= torch.cuda.device_count() *4,
+                                                 batch_size=batch_size,
+                                                 pin_memory=True)  ##2 number of workers
 
-        valid_weight = config["training"]["loss"]["valid_weight"]
-        hole_weight = config["training"]["loss"]["hole_weight"]
-        
-        # # Training Loop
-        def train_loop(train_loader, model, device):
-            num_batches = len(train_loader.dataset)
-            running_loss = 0
-            model.train()
-            
-            for batch, (input_data, y_true) in enumerate(tqdm(train_loader)):
-                
-                input_data = input_data.to(device) 
-                optimizer.zero_grad(set_to_none=True)
 
-                y_pred = model(input_data)
-                mask = input_data[:, 40:, :, :]
-                
-                loss = soundfield_loss(mask, y_true, y_pred, valid_weight, hole_weight, device)
+    # Load Model and hyperparams
+    model = sfun.ComplexUnet(config["training"])
+    model = model.to(device)
 
-                # Backpropagation
-                loss.backward()
-                optimizer.step()
-                running_loss += loss.detach().item()
-            
-            return running_loss/num_batches
-        
-        
-        def plot_fig(input_data, y_pred, y_true):
-            
-            freq = 20
-            
-            input_data = input_data[0][freq]
-            y_pred = y_pred[0][freq] 
-            y_true = y_true[0][freq]
-            
-            
-            fig = plt.figure(figsize=(30, 10))
-            plt.subplot(131)
-            plt.imshow(np.real((input_data.detach().cpu())), aspect='auto')
-            plt.colorbar()
-            plt.title(f'Masked Sound Field')
-            plt.tight_layout()
-            
-            plt.subplot(132)
-            plt.imshow(np.real((y_pred.detach().cpu())), aspect='auto')
-            plt.colorbar()
-            plt.title(f'Sound Field Reconstructed')
-            plt.tight_layout()
-            
-            plt.subplot(133)
-            plt.imshow(np.real((y_true.detach().cpu())), aspect='auto')
-            plt.colorbar()
-            plt.title(f'Sound Field Ground Truth')
-            plt.tight_layout()
-            
-            writer.add_figure("Sound Field Generation", fig)
-            
+    def count_parameters(model):
+        return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-        # # Validation Loop
-        val_loss_best = 0
-        
-        def val_loop(val_loader, model, epoch, device):
-            num_batches = len(val_loader.dataset)
-            running_loss = 0
-            model.eval()
-            
-            input_data_to_plot = None
-            y_true_to_plot = None
-            
-            #batch_to_plot = np.random.randint(0, num_batches)
-            
-            with torch.no_grad():
-                
-                for batch, (input_data, y_true) in enumerate(tqdm(val_loader)):
-        
-                    input_data = input_data.to(device)
-                    y_pred = model(input_data)
-                    mask = input_data[:, 40:, :, :]
-                
-                    # get only one random
-                    loss = soundfield_loss(mask, y_true, y_pred, valid_weight, hole_weight, device)
-                    running_loss += loss.detach().item()
-                    
-                    
-                    input_data_to_plot = input_data
-                    y_true_to_plot = y_true
-            
-            #plot_fig(input_data, y_pred, y_true, epoch) # model best -> need to be added to the training loop, right?
-            return running_loss/num_batches, input_data_to_plot, y_true_to_plot
+    print('Model parameters-->' + str(count_parameters(model)))
 
-        plot_val = True
-        
-        # Training
-        for n_e in tqdm(range(epochs)):
-            
-            train_loss = train_loop(train_loader,model,device)
-            val_loss, input_data_tp, y_true_tp = val_loop(val_loader, model, n_e, device)
-            
-            scheduler.step(val_loss)
-            
-            # Write to tensorboard
-            writer.add_scalar('Loss/train',  train_loss, n_e)
-            writer.add_scalar('Loss/val', val_loss, n_e)
+    count_parameters(model)
 
-            # Handle saving best model + early stopping
-            if n_e == 0:
-                val_loss_best = val_loss
-                early_stop_counter = 0
-                #saved_model_path = saved_model_path + "_" + str(n_e)
-                saved_model_path = saved_model_path
-                
-                torch.save(model.state_dict(), saved_model_path)
-            if n_e > 0 and val_loss < val_loss_best:
-                #saved_model_path = saved_model_path.split('_')[0] + "_" + str(n_e)
-                
-                saved_model_path = saved_model_path
-                torch.save(model.state_dict(), saved_model_path)
-                val_loss_best = val_loss
-                #print(f'Model saved epoch{n_e}')
-                early_stop_counter = 0
-            else:
-                early_stop_counter +=1
-                print('Patience status: ' + str(early_stop_counter) + '/' + str(early_stop_patience))
-            
-            # Early stopping
-            if early_stop_counter > early_stop_patience:
-                print('Training finished at epoch '+str(n_e))
-                break
+    # # Create optimizer
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-            # # At the end of every n_e epochs we print losses and compute soundfield plots and send them to tensorboard
-            if not n_e % epoch_to_plot and plot_val and n_e > 0:
-                print('Train loss: ' + str(train_loss))
-                print('Val loss: ' + str(val_loss))
+    valid_weight = config["training"]["loss"]["valid_weight"]
+    hole_weight = config["training"]["loss"]["hole_weight"]
 
-                # n_s = np.random.randint(0, src_val.shape[0])
-                model_best = sfun.ComplexUnet(config["training"]).to(device)
-                model_best.load_state_dict(torch.load(os.path.join(BASE_DIR, 'models', saved_model_path)))
-                #n_epoch_model_saved = saved_model_path.split('_')[1]
-                #print(f"Model loaded at epoch: {n_epoch_model_saved}")
-                
-                y_pred_tp = model_best(input_data_tp)
-                plot_fig(input_data_tp, y_pred_tp, y_true_tp)
-    else: 
-        # inference time loop
-        
-        model = sfun.ComplexUnet(config["training"])
-        evaluation_folder_path = '/nas/home/fronchini/complex-sound-field/models/nobn/'
-        evaluation_model_path = os.path.join(evaluation_folder_path, 'ComplexUNet')
-        results_eval_path = os.path.join(evaluation_folder_path, 'results')
-        os.makedirs(results_eval_path, exist_ok=True)
-        num_mics = 10
-        
-        model.load_state_dict(torch.load(evaluation_model_path, map_location='cuda:0'))
-        model = model.to(device)
-        
-        results_dic = {
-            'nmse': [], 
-            'ssim': []
-        }
-        
-        frequencies = utils.get_frequencies()
-        
+    # # Training Loop
+    def train_loop(train_loader, model, device):
+        num_batches = len(train_loader.dataset)
+        running_loss = 0
+        model.train()
 
-        for batch, (input_data, y_true) in enumerate(tqdm(test_loader)):
-            model.eval()
-            with torch.no_grad():
+        for batch, (input_data, y_true) in enumerate(tqdm(train_loader)):
+            input_data = input_data.to(device)
+            optimizer.zero_grad(set_to_none=True)
+
+            y_pred = model(input_data)
+            mask = input_data[:, 40:, :, :]
+
+            loss = soundfield_loss(mask, y_true, y_pred, valid_weight, hole_weight, device)
+
+            # Backpropagation
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.detach().item()
+
+            torch.cuda.empty_cache()
+            gc.collect()
+
+        return running_loss / num_batches
+
+    def plot_fig(input_data, y_pred, y_true, n_e):
+
+        freq = 20
+
+        input_data = input_data[0][freq]
+        y_pred = y_pred[0][freq]
+        y_true = y_true[0][freq]
+
+        fig = plt.figure(figsize=(30, 10))
+        plt.subplot(131)
+        plt.imshow(np.real((input_data.detach().cpu())), aspect='auto')
+        plt.colorbar()
+        plt.title(f'Masked Sound Field')
+        plt.tight_layout()
+
+        plt.subplot(132)
+        plt.imshow(np.real((y_pred.detach().cpu())), aspect='auto')
+        plt.colorbar()
+        plt.title(f'Sound Field Reconstructed')
+        plt.tight_layout()
+
+        plt.subplot(133)
+        plt.imshow(np.real((y_true.detach().cpu())), aspect='auto')
+        plt.colorbar()
+        plt.title(f'Sound Field Ground Truth')
+        plt.tight_layout()
+
+        writer.add_figure("Sound Field Generation", fig, global_step=n_e)
+
+    # # Validation Loop
+    val_loss_best = 0
+
+    def val_loop(val_loader, model, epoch, device):
+        num_batches = len(val_loader.dataset)
+        running_loss = 0
+        model.eval()
+
+        input_data_to_plot = None
+        y_true_to_plot = None
+
+        with torch.no_grad():
+            for batch, (input_data, y_true) in enumerate(tqdm(val_loader)):
                 input_data = input_data.to(device)
-                y_true = y_true.to(device)
                 y_pred = model(input_data)
                 mask = input_data[:, 40:, :, :]
-                
-                nmse = utils.NMSE_fun(y_pred[0], y_true[0])
-                ssim_metric = utils.SSIM_fun(y_pred[0], y_true[0])
-                
-                results_dic['nmse'].append(nmse)
-                results_dic['ssim'].append(ssim_metric)
-            
-    
-        average_nsme = 10*np.log10(np.mean(results_dic['nmse'], axis=0))
-        # save nsme
-        filename_path = os.path.join(results_eval_path, f'nmse_complex_{num_mics}.npy')
-        np.save(filename_path, average_nsme, allow_pickle=False)
-        
 
-        average_ssim = np.mean(results_dic['ssim'], axis=0)
-        #save nsme
-        filename_path = os.path.join(results_eval_path ,f'ssim_complex_{num_mics}.npy')
-        np.save(filename_path, average_nsme, allow_pickle=False)
-            
-        x_values = frequencies
-        
-        tick_values = [30, 40, 50, 60, 70, 80, 90, 100, 200, 300]
+                # get only one random
+                loss = soundfield_loss(mask, y_true, y_pred, valid_weight, hole_weight, device)
+                running_loss += loss.detach().item()
 
-        # calculate the NMSE
-        plt.figure(figsize=(14, 10))
-        plt.plot(x_values, average_nsme)
-        plt.xscale('log')
-        
-        plt.xticks(tick_values, tick_values)
-        
-        plt.xlabel('$f [Hz]$'), plt.ylabel('$NMSE [dB]$'), plt.title('$\text{NMSE estimated from simulated data}$')
-        plt.grid(which='both', linestyle='-', linewidth=0.5, color='gray')
-        plt.savefig(os.path.join(results_eval_path, f'average_NMSE_{num_mics}.png'))
-        
-        # calculate the SSIM
-        plt.figure(figsize=(14, 10))
-        plt.plot(x_values, average_ssim)
-        plt.xscale('log')
-        
-        plt.xticks(tick_values, tick_values)
-        
-        plt.xlabel('$f [Hz]$'), plt.ylabel('$MSSIM $'), plt.title('$\text{MSSIM estimated from simulated data}$')
-        plt.grid(which='both', linestyle='-', linewidth=0.5, color='gray')
-        plt.savefig(os.path.join(results_eval_path, f'average_SSIM_{num_mics}mics.png'))
-            
+                input_data_to_plot = input_data
+                y_true_to_plot = y_true
+
+        return running_loss / num_batches, input_data_to_plot, y_true_to_plot
+
+    plot_val = True
+
+    # Training
+    for n_e in tqdm(range(epochs)):
+
+        train_loss = train_loop(train_loader, model, device)
+        val_loss, input_data_tp, y_true_tp = val_loop(val_loader, model, n_e, device)
+
+        # Write to tensorboard
+        writer.add_scalar('Loss/train', train_loss, n_e)
+        writer.add_scalar('Loss/val', val_loss, n_e)
+
+        # Handle saving best model + early stopping
+        if n_e == 0:
+            val_loss_best = val_loss
+            early_stop_counter = 0
+            # saved_model_path = saved_model_path + "_" + str(n_e)
+            saved_model_path = saved_model_path
+
+            torch.save(model.state_dict(), saved_model_path)
+        if n_e > 0 and val_loss < val_loss_best:
+            # saved_model_path = saved_model_path.split('_')[0] + "_" + str(n_e)
+
+            saved_model_path = saved_model_path
+            torch.save(model.state_dict(), saved_model_path)
+            val_loss_best = val_loss
+            # print(f'Model saved epoch{n_e}')
+            early_stop_counter = 0
+        else:
+            early_stop_counter += 1
+            print('Patience status: ' + str(early_stop_counter) + '/' + str(early_stop_patience))
+
+        # Early stopping
+        if early_stop_counter > early_stop_patience:
+            print('Training finished at epoch ' + str(n_e))
+            break
+
+        # # At the end of every n_e epochs we print losses and compute soundfield plots and send them to tensorboard
+        if not n_e % epoch_to_plot and plot_val and n_e > 0:
+            print('Train loss: ' + str(train_loss))
+            print('Val loss: ' + str(val_loss))
+            model_best = sfun.ComplexUnet(config["training"]).to(device)
+            model_best.load_state_dict(torch.load(os.path.join(BASE_DIR, 'models', saved_model_path)))
+            y_pred_tp = model_best(input_data_tp)
+            plot_fig(input_data_tp, y_pred_tp, y_true_tp, n_e)
+
 
 if __name__ == '__main__':
     main()

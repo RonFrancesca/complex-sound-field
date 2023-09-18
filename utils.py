@@ -11,21 +11,33 @@ dir = '/nas/home/fronchini/complex-sound-field/figures'
 
 def NMSE_fun(pred, gt):
     
-    pred = pred.reshape(40, -1).cpu().numpy()
-    gt = gt.reshape(40, -1).cpu().numpy()
-    
+    pred = pred.reshape(40, -1)
+    gt = gt.reshape(40, -1)
+
     num = np.sum(np.power(np.abs(np.abs(gt) - np.abs(pred)),2),axis=-1)
     den = np.sum(np.power(np.abs(np.abs(gt)),2),axis=-1)
     
     nmse = num/den
     return nmse
 
+
+def NMSE_complex_fun(pred, gt):
+    pred = pred.reshape(40, -1)
+    gt = gt.reshape(40, -1)
+
+    num = np.sum(np.power(np.abs(gt - pred), 2), axis=-1)
+    den = np.sum(np.power(np.abs(gt), 2), axis=-1)
+
+    nmse = num / den
+    return nmse
+
+
 def SSIM_fun(pred, gt):
     
     res = np.zeros((40, 1))
     
-    pred = pred.reshape(40, -1).cpu().numpy() 
-    gt = gt.reshape(40, -1).cpu().numpy()
+    pred = pred.reshape(40, -1)
+    gt = gt.reshape(40, -1)
     
     for freq in range(pred.shape[0]):
         data_range = np.abs(pred[freq, :]).max() - np.abs(pred[freq, :]).min()

@@ -6,20 +6,21 @@ import random
 import torch
 import glob
 import scipy
-from pathlib import Path
-import ipdb
 import copy
 
 
 import utils
 
+def norm_sf_complex(input_ten):
+    gt_real_norm = (input_ten.real - input_ten.real.mean()) / input_ten.real.std()
+    gt_imag_norm = (input_ten.imag - input_ten.imag.mean()) / input_ten.imag.std()
+    norm_ten = gt_real_norm.type(torch.complex64) + 1j * gt_imag_norm.type(torch.complex64)
+    return norm_ten
 
-def generate_mask(height, width, channels, num_mics=None):
+
+def generate_mask(height, width, channels, num_mics=10):
     
-    
-    mask_slice = np.zeros((height*width), np.uint8) 
-    
-    # test
+    mask_slice = np.zeros((height*width), np.uint8) ### ???? if everything is cast to complex or everything is set to 0, need to multiply or not
 
     num_holes = height*width - num_mics
 
@@ -33,8 +34,7 @@ def generate_mask(height, width, channels, num_mics=None):
 
     mask = np.repeat(mask_slice, channels, axis=2)
 
-    #stesso shape con tutti 1 oppure la levo #TODO
-    return mask 
+    return mask
 
 class SoundFieldDataset(Dataset):
     def __init__(
@@ -44,6 +44,11 @@ class SoundFieldDataset(Dataset):
         xSample=32, 
         ySample=32, 
         factor=4,
+        return_dims = False,
+        do_normalize = True,
+        num_mics = 10,
+        do_test = False,
+        do_plot = False
         
         
     ):
@@ -51,6 +56,11 @@ class SoundFieldDataset(Dataset):
         self.dataset_folder = dataset_folder
         self.freq = utils.get_frequencies()
         self.num_freq = len(self.freq)
+        self.return_dims = return_dims
+        self.do_normalize = do_normalize
+        self.do_test = do_test
+        self.num_mics = num_mics
+        self.do_plot = do_plot
         
         if dataset_folder is None and set_file_list is None:
             print(f"Only one of those can be sett to None")
@@ -78,45 +88,54 @@ class SoundFieldDataset(Dataset):
         
         f_response_complex = mat['FrequencyResponse'].astype(np.complex64)
         
-        #f_response_complex = torch.from_numpy(f_response_complex)
-        
+
         f_response_complex = np.transpose(f_response_complex, (1, 0, 2))
-        #f_response_complex = torch.transpose(f_response_complex, 0, 1) # transpose (x, y room) -> plot
-        # plot
-        
+
         sf_gt= f_response_complex[:, :, frequencies] # considering only 40 frequencies [32, 32, 40]
-        
-        
-        # as far as I get , they take the sample as gt, the pre-process is the label itself and I have no idea on how to pre-process the dataset
+
         initial_sf = copy.deepcopy(sf_gt)
         
 
         # Get mask samples (always the same mask so far)
-        #mask = torch.from_numpy(generate_mask(int(self.xSample/self.factor), int(self.ySamples/self.factor), self.num_freq))
-        
-        num_mics_list = [5, 15, 35, 55]
-        num_mics = random.choice(num_mics_list)
-        
-        mask = generate_mask(int(self.xSample/self.factor), int(self.ySamples/self.factor), self.num_freq, num_mics)
-        #print(f"Generated random mask with {num_mics}")
-        
+        if self.do_test:
+            if self.num_mics is None:
+                print('Error: No number of microphones provided, we are in test mode!.')
+                return
+            mask = generate_mask(int(self.xSample / self.factor), int(self.ySamples / self.factor), self.num_freq, self.num_mics)
+        else:
+            num_mics_list = [5, 15, 35, 55]
+            num_mics = random.choice(num_mics_list)
+            mask = generate_mask(int(self.xSample/self.factor), int(self.ySamples/self.factor), self.num_freq, num_mics)
+
         # # preprocessing
+        mask_downsampled = mask
+
         irregular_sf, mask = utils.preprocessing(self.factor, initial_sf, mask)
-        
+
         irregular_sf = torch.from_numpy(irregular_sf)
         mask = torch.from_numpy(mask)
+
+        if self.do_normalize:
+            irregular_sf = norm_sf_complex(irregular_sf)
 
         sf_masked = torch.cat((irregular_sf, mask), dim=2) 
         
         sf_masked = torch.moveaxis(sf_masked, 2, 0) 
         sf_gt = torch.moveaxis(torch.from_numpy(sf_gt), 2, 0)
+        if self.do_normalize:
+            sf_gt = norm_sf_complex(sf_gt)
 
-        # Scale ground truth sound field (we'll see it later)
-        #sf_gt = util.scale(sf_gt)
-        
-        #ipdb.set_trace()
-        # sf_masked = torch.tensor(sf_masked, dtype=torch.complex64) ##TODO: Could be this one? 
-        return sf_masked, sf_gt # shapes: [32, 32, 80], [32, 32, 40]
-        #return [irregular_sf, mask], sf_gt
-    
-        
+        # Return also room dimensions for plots
+        x_dim = float(self.soundfield_list[item].split('_')[3])
+        y_dim = float(self.soundfield_list[item].split('_')[4])
+
+        if self.return_dims:
+            if self.do_plot:
+                return sf_masked, sf_gt,mask_downsampled, x_dim, y_dim
+            else:
+                return sf_masked, sf_gt, x_dim, y_dim
+        else:
+            if self.do_plot:
+                return sf_masked, sf_gt, mask_downsampled
+            else:
+                return sf_masked, sf_gt
