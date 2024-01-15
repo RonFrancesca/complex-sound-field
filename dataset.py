@@ -47,6 +47,7 @@ class SoundFieldDataset(Dataset):
         return_dims = False,
         do_normalize = True,
         num_mics = 10,
+        num_mics_list = [5, 15, 35, 55],
         do_test = False,
         do_plot = False
         
@@ -61,6 +62,7 @@ class SoundFieldDataset(Dataset):
         self.do_test = do_test
         self.num_mics = num_mics
         self.do_plot = do_plot
+        self.num_mics_list = num_mics_list
         
         if dataset_folder is None and set_file_list is None:
             print(f"Only one of those can be sett to None")
@@ -99,13 +101,12 @@ class SoundFieldDataset(Dataset):
         # Get mask samples (always the same mask so far)
         if self.do_test:
             if self.num_mics is None:
-                print('Error: No number of microphones provided, we are in test mode!.')
+                print('Error: No number of microphones provided, we are in test mode!')
                 return
             mask = generate_mask(int(self.xSample / self.factor), int(self.ySamples / self.factor), self.num_freq, self.num_mics)
         else:
-            num_mics_list = [5, 15, 35, 55]
-            num_mics = random.choice(num_mics_list)
-            mask = generate_mask(int(self.xSample/self.factor), int(self.ySamples/self.factor), self.num_freq, num_mics)
+            #num_mics = random.choice(self.num_mics_list)
+            mask = generate_mask(int(self.xSample/self.factor), int(self.ySamples/self.factor), self.num_freq, random.choice(self.num_mics_list))
 
         # # preprocessing
         mask_downsampled = mask
@@ -126,8 +127,8 @@ class SoundFieldDataset(Dataset):
             sf_gt = norm_sf_complex(sf_gt)
 
         # Return also room dimensions for plots
-        x_dim = float(self.soundfield_list[item].split('_')[3])
-        y_dim = float(self.soundfield_list[item].split('_')[4])
+        x_dim = float(self.soundfield_list[item].split('_')[5])
+        y_dim = float(self.soundfield_list[item].split('_')[6])
 
         if self.return_dims:
             if self.do_plot:

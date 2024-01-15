@@ -25,7 +25,7 @@ plt.rcParams.update({
     "font.sans-serif": ["Helvetica"],
     'font.size': 20})
 
-BASE_DIR = ''
+BASE_DIR = './'
 
 def loss_valid(mask, y_true, y_pred,device):
     return torch.nn.L1Loss()(mask * y_true, mask * y_pred)
@@ -51,6 +51,8 @@ def main():
                         help='JSON-formatted file with configuration parameters')
     parser.add_argument('--best_model_path', default='ComplexUNet',
                         help='Name of the best-performing saved model')
+    parser.add_argument('--mode', default='train',
+                        help='Either we need to traing the model or not ')
     args = parser.parse_args()
 
     config_path = args.config
@@ -95,20 +97,28 @@ def main():
 
     # load dataset
     if mode == 'train':
+        #if config["run"]["test"] == 1:
+            # sf_train = SoundFieldDataset(dataset_folder=cfg_dataset["train_path"], xSample=cfg_dataset["xSamples"],
+            #                              ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"],do_normalize=do_normalize)
+            # sf_val = SoundFieldDataset(dataset_folder=cfg_dataset["val_path"], xSample=cfg_dataset["xSamples"],
+            #                            ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"],do_normalize=do_normalize)
+            
+       # else:
+        dataset_filename_list = glob.glob(os.path.join(config["dataset"]["full_dataset_path"], "*.mat"))
+        
         if config["run"]["test"] == 1:
-            sf_train = SoundFieldDataset(dataset_folder=cfg_dataset["train_path"], xSample=cfg_dataset["xSamples"],
-                                         ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"],do_normalize=do_normalize)
-            sf_val = SoundFieldDataset(dataset_folder=cfg_dataset["val_path"], xSample=cfg_dataset["xSamples"],
-                                       ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"],do_normalize=do_normalize)
-        else:
-            dataset_filename_list = glob.glob(os.path.join(config["dataset"]["full_dataset_path"], "*.mat"))
-            sf_train_list, sf_val_list = train_test_split(dataset_filename_list, train_size=0.75, test_size=0.25,
+            # if it is a test, I take only 100 files
+            dataset_filename_list = glob.glob(os.path.join(config["dataset"]["full_dataset_path"], "*.mat"))[:100]
+        
+        sf_train_list, sf_val_list = train_test_split(dataset_filename_list, train_size=0.75, test_size=0.25,
                                                           random_state=42)
+        
+            
 
-            sf_val = SoundFieldDataset(set_file_list=sf_val_list, xSample=cfg_dataset["xSamples"],
-                                       ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"],do_normalize=do_normalize)
-            sf_train = SoundFieldDataset(set_file_list=sf_train_list, xSample=cfg_dataset["xSamples"],
-                                         ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"],do_normalize=do_normalize)
+        sf_val = SoundFieldDataset(set_file_list=sf_val_list, xSample=cfg_dataset["xSamples"],
+                                       ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"],do_normalize=do_normalize, num_mics_list=cfg_dataset["num_mics_list"])
+        sf_train = SoundFieldDataset(set_file_list=sf_train_list, xSample=cfg_dataset["xSamples"],
+                                         ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"],do_normalize=do_normalize, num_mics_list=cfg_dataset["num_mics_list"])
 
         train_loader = torch.utils.data.DataLoader(sf_train,
                                                    shuffle=True,
@@ -215,8 +225,8 @@ def main():
                 loss = soundfield_loss(mask, y_true, y_pred, valid_weight, hole_weight, device)
                 running_loss += loss.detach().item()
 
-                input_data_to_plot = input_data
-                y_true_to_plot = y_true
+                input_data_to_plot = input_data.detach() # LUCA added .detach().item()
+                y_true_to_plot = y_true.detach() # LUCA added .detach().item()
 
         return running_loss / num_batches, input_data_to_plot, y_true_to_plot
 
@@ -258,14 +268,18 @@ def main():
             break
 
         # # At the end of every n_e epochs we print losses and compute soundfield plots and send them to tensorboard
-        if not n_e % epoch_to_plot and plot_val and n_e > 0:
-            print('Train loss: ' + str(train_loss))
-            print('Val loss: ' + str(val_loss))
-            model_best = sfun.ComplexUnet(config["training"]).to(device)
-            model_best.load_state_dict(torch.load(os.path.join(BASE_DIR, 'models', saved_model_path)))
-            y_pred_tp = model_best(input_data_tp)
-            plot_fig(input_data_tp, y_pred_tp, y_true_tp, n_e)
-
+        # if not n_e % epoch_to_plot and plot_val and n_e > 0: 
+        #     print('Train loss: ' + str(train_loss))
+        #     print('Val loss: ' + str(val_loss))
+        #     model_best = sfun.ComplexUnet(config["training"]).to(device)
+        #     model_best.load_state_dict(torch.load(saved_model_path))
+        #     y_pred_tp = model_best(input_data_tp)
+        #     plot_fig(input_data_tp, y_pred_tp, y_true_tp, n_e)
+        #     del model_best
+        #     del y_pred_tp
+        #     torch.cuda.empty_cache()
+        
+            
 
 if __name__ == '__main__':
     main()
