@@ -4,6 +4,7 @@
          "gpu": "2"
     },
     "dataset": {
+        "base_dir": "/nas/home/fronchini/complex-sound-field",
         "log_dir": "/nas/home/fronchini/complex-sound-field/EUSIPCO/",
         "full_dataset_path": "/nas/home/fronchini/complex-sound-field/dataset/train/T60-0.4-1.6",
         "test_path": "/nas/home/fronchini/complex-sound-field/dataset/test_set",

@@ -9,6 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 torch.backends.cudnn.benchmark = True
 print(torch.__version__)
 from dataset import SoundFieldDataset
+import ipdb
 
 import utils
 import sfun_torch as sfun
@@ -19,7 +20,6 @@ plt.rcParams.update({
     "font.sans-serif": ["Helvetica"],
     'font.size': 20})
 
-BASE_DIR = '/nas/home/lcomanducci/cxz/SR_ICASSP/complex-sound-field'
 
 
 def plot2pgf(temp, filename, folder='./'):
@@ -52,6 +52,9 @@ def main():
 
     config = utils.load_config(config_path)
     print('Loaded configuration from: %s' % config_path)
+    
+    base_dir = config["dataset"]["base_dir"]
+    
 
 
     # Imports to select GPU
@@ -64,12 +67,11 @@ def main():
     do_normalize = config["dataset"]["do_normalize"]
 
     # load dataset
-
     for num_mics in [5, 15, 35, 55]:
 
         print('Computing for '+str(num_mics)+' microphones')
         sf_test = SoundFieldDataset(dataset_folder=cfg_dataset["test_path"], xSample=cfg_dataset["xSamples"],
-                                    ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"],do_test=True, num_mics=num_mics,do_normalize=do_normalize)
+                                    ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"],do_test=True, num_mics=num_mics, do_normalize=do_normalize)
 
         test_loader = torch.utils.data.DataLoader(sf_test,
                                                     shuffle=False,
@@ -81,10 +83,15 @@ def main():
         # inference time loop
         model = sfun.ComplexUnet(config["training"])
         model_name = config["training"]["session_id"]
-        evaluation_folder_path = '/nas/home/lcomanducci/cxz/SR_ICASSP/complex-sound-field/models/'+str(model_name)
+        
+        evaluation_folder_path = os.path.join(base_dir, 'models', str(model_name))
+        
         evaluation_model_path = os.path.join(evaluation_folder_path, 'ComplexUNet')
+        
         results_eval_path = os.path.join(evaluation_folder_path, 'results')
+        
         os.makedirs(results_eval_path, exist_ok=True)
+        
         model.load_state_dict(torch.load(evaluation_model_path, map_location='cuda:0'))
         model = model.to(device)
 
@@ -131,6 +138,9 @@ def main():
                                 aspect='auto'), plt.colorbar(), plt.tight_layout()
                     plt.xlabel('$x [m]$'), plt.ylabel('$y [m] $'),
                     plt.show()
+                    
+                    plot_file_path = os.path.join(results_eval_path, f'{num_mics}_1.png')
+                    plt.savefig(plot_file_path) 
 
 
                     n_freq = 5
@@ -150,8 +160,11 @@ def main():
                                 aspect='auto'), plt.colorbar(), plt.tight_layout()
                     plt.xlabel('$x [m]$'), plt.ylabel('$y [m] $'),
                     plt.show()
+                    
+                    plot_file_path = os.path.join(results_eval_path, f'{num_mics}_2.png')
+                    plt.savefig(plot_file_path) 
             idx = idx +1
-            if idx ==1000:
+            if idx == 50:
                 break
 
 
@@ -185,6 +198,10 @@ def main():
 
         plt.xlabel('$f [Hz]$'), plt.ylabel('$NMSE [dB]$')#, #plt.title('$\text{NMSE estimated from simulated data}$')
         plt.grid(which='both', linestyle='-', linewidth=0.5, color='gray')
+       
+        plot_file_path = os.path.join(results_eval_path, 'NMSE_[dB].png')
+        plt.savefig(plot_file_path) 
+        
         plt.show()
 
 

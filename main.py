@@ -25,8 +25,6 @@ plt.rcParams.update({
     "font.sans-serif": ["Helvetica"],
     'font.size': 20})
 
-BASE_DIR = './'
-
 def loss_valid(mask, y_true, y_pred,device):
     return torch.nn.L1Loss()(mask * y_true, mask * y_pred)
 
@@ -69,6 +67,7 @@ def main():
 
     epochs = 4 if config["run"]["test"] else config["training"]["num_epochs"]
     lr = config["training"]["lr"]
+    base_dir = config["dataset"]["base_dir"]
 
     early_stop_patience = 100
     epoch_to_plot = 2  # Plot evey epoch_to_plot epochs
@@ -76,7 +75,7 @@ def main():
 
     # Open SummaryWriter for Tensorboard
     writer = SummaryWriter(log_dir=(config["dataset"]["log_dir"] + config["training"]["session_id"]))
-    dir_best_model = os.path.join(BASE_DIR, 'models', config["training"]["session_id"])
+    dir_best_model = os.path.join(base_dir, 'models', config["training"]["session_id"])
     os.makedirs(dir_best_model, exist_ok=True)
     saved_model_path = os.path.join(dir_best_model, best_model_path)
 
