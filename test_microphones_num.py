@@ -192,8 +192,9 @@ def main():
             plt.show()
 
     else:
+        T60 = 1
         model_name = config["training"]["session_id"]
-        data_path = os.path.join(base_dir, 'models', str(model_name), 'results', 'n_mics')
+        data_path = os.path.join(base_dir, 'models', str(model_name), 'results', f'n_mics/T60_{T60}')
         
         
         # nmse per number of microphone

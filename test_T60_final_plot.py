@@ -192,9 +192,9 @@ def main():
             plt.show()
 
     else:
-        num_mics = 15
+        num_mics = 35
         model_name = config["training"]["session_id"]
-        data_path = os.path.join(base_dir, 'models', str(model_name), 'results', 'T60', f"num_mics_{num_mics}")
+        data_path = os.path.join(base_dir, 'models', str(model_name), 'results', 'T60', f"n_mics_{num_mics}")
         
         tick_values = [30, 40, 50, 60, 70, 80, 90, 100, 200, 300]
         frequencies = utils.get_frequencies()
@@ -212,7 +212,7 @@ def main():
         colors = ['-c', '-m', '-y', '-k', '-g', '-b', '-r']
         
         
-        ipdb.set_trace()
+        #ipdb.set_trace()
         for T60, color in zip(T60_list, colors):
             filename = os.path.join(data_path,f'nmse_complex_{T60}.npy')
             nsme_T60_tmp = np.load(os.path.join(data_path,f'nmse_complex_{T60}.npy'))
@@ -277,7 +277,8 @@ def main():
         plt.xticks(tick_values, tick_values)
         plt.xlabel('$f [Hz]$'), plt.ylabel('$NMSE [dB]$')#, plt.title('$\text{NMSE estimated from simulated data}$')
         plt.grid(which='both', linestyle='-', linewidth=0.5, color='gray')
-        plt.legend(['5 $\mathrm{CxNet}$','15 $\mathrm{CxNet}$','35 $\mathrm{CxNet}$','55 $\mathrm{CxNet}$','5 $\mathrm{lluis}$','15 $\mathrm{lluis}$','35 $\mathrm{lluis}$','55 $\mathrm{lluis}$','5 $\mathrm{kernel}$','15 $\mathrm{kernel}$',])
+        #plt.legend(['5 $\mathrm{CxNet}$','15 $\mathrm{CxNet}$','35 $\mathrm{CxNet}$','55 $\mathrm{CxNet}$','5 $\mathrm{lluis}$','15 $\mathrm{lluis}$','35 $\mathrm{lluis}$','55 $\mathrm{lluis}$','5 $\mathrm{kernel}$','15 $\mathrm{kernel}$',])
+        plt.legend(T60_list)
 
         plt.show()
         
