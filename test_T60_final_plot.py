@@ -193,6 +193,10 @@ def main():
 
     else:
         calcolate = 'magnitude'
+        average_data_our_network = []
+        average_data_lluis = []
+        average_data_kernel_based = []
+        
         
         for num_mics in [5, 15, 35, 55]:
             
@@ -207,29 +211,34 @@ def main():
             
             T60_list = [0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6]
             
+            
             colors = ['-c', '-m', '-y', '-k', '-g', '-b', '-r']
             colors_kernel = ['-*c', '-*m', '-*y', '-*k', '-*g', '-*b', '-*r']
             colors_lluis = ['--c', '--m', '--y', '--k', '--g', '--b', '--r']
             
             
             kernel_path ='/nas/home/lcomanducci/cxz/SR_ICASSP/complex-sound-field/results_eusipco'
-            lluis_path = '/nas/home/fronchini/sound-field-neural-network/sessions/session_04-16-bs32/real_data_evaluation/min_mics_5_max_mics_65_step_mics_5'
+            lluis_path = '/nas/home/fronchini/sound-field-neural-network/sessions/session_04-16-bs32/simulated_data_evaluation/min_mics_5_max_mics_65_step_mics_5'
             
             
             if calcolate == 'magnitude':
                 for idx, T60 in enumerate(T60_list):
                     # our network
-                    # nsme_T60_tmp = np.load(os.path.join(data_path, f'nmse_complex_{T60}.npy'))
-                    # plt.plot(x_values, nsme_T60_tmp, colors[idx])
+                    nsme_T60_tmp = np.load(os.path.join(data_path, f'nmse_complex_{T60}.npy'))
+                    plt.plot(x_values, nsme_T60_tmp, colors[idx])
+                    average_data_our_network.append(nsme_T60_tmp)
                     
                     # lluis network
-                    #lluis_path_tmp = os.path.join(lluis_path, f'T60_{T60}')
-                    lluis_path = os.path.join(lluis_path)
-                    nmse_T60_lluis_tmp = np.load(os.path.join(lluis_path, f'nmse_lluis_{num_mics}.npy'))
+                    lluis_path_tmp = os.path.join(lluis_path, f'T60_{T60}')
+                    #slluis_path = os.path.join(lluis_path_tmp)
+                    nmse_T60_lluis_tmp = np.load(os.path.join(lluis_path_tmp, f'nmse_lluis_{num_mics}.npy'))
                     plt.plot(x_values, 10*np.log10(np.mean(nmse_T60_lluis_tmp,axis=0)), colors_lluis[idx])
+                    average_data_lluis.append(10*np.log10(np.mean(nmse_T60_lluis_tmp,axis=0)))
                     
                     # kernel based
-                    # T
+                    nsme_T60_kernel_tmp = np.load(os.path.join(kernel_path, f'nmse_sim_sig_proc_{num_mics}_mics_reg_0.1_t60_{T60}_.npy'))
+                    plt.plot(x_values, nsme_T60_kernel_tmp, colors_kernel[idx])
+                    average_data_kernel_based.append(nsme_T60_kernel_tmp)
                     
                 plt.legend([
                     '0.4 $\mathrm{CxNet}$',
@@ -289,18 +298,55 @@ def main():
                     '1.6 $\mathrm{kernel}$',
                 ])
                 
-                
-                    
+            
+            
             plt.xscale('log')
             plt.xticks(tick_values, tick_values)
             plt.xlabel('$f [Hz]$'), plt.ylabel('$NMSE [dB]$')#, plt.title('$\text{NMSE estimated from simulated data}$')
-            plt.grid(which='both', linestyle='-', linewidth=0.5, color='gray')
-                
+            plt.grid(which='both', linestyle='-', linewidth=0.5, color='gray')  
             plt.show()
-                
-            plot_file_path = os.path.join(data_path, f'final_plot_{calcolate}_real.png')
+            plot_file_path = os.path.join(data_path, f'final_plot_{calcolate}_bL32.png')
             plt.savefig(plot_file_path)
             plt.close() 
+            
+            
+            # average and variance proposed method
+            
+            average_our_network = np.mean(average_data_our_network, axis=0) 
+            variance_our_network = np.var(average_data_our_network, axis=0)
+            
+            # average and variance lluis network
+            average_lluis = np.mean(average_data_lluis, axis=0) 
+            variance_lluis = np.var(average_data_lluis, axis=0)
+            
+            # average and variance kernel based network
+            average_kernel_based = np.mean(average_data_kernel_based, axis=0) 
+            variance_kernel_based = np.var(average_data_kernel_based, axis=0)
+            
+            
+            # Plot average and variance
+            
+            plt.figure(figsize=(14, 10))
+            alpha = 0.5
+            plt.plot(x_values, average_our_network, color='b', label='Average')
+            plt.fill_between(x_values, average_our_network - variance_our_network, average_our_network + variance_our_network, color='b', alpha=alpha, label='Variance')
+            
+            plt.plot(x_values, average_lluis, color='orange', label='Average')
+            plt.fill_between(x_values, average_lluis - variance_lluis, average_lluis + variance_lluis, color='orange', alpha=alpha, label='Variance')
+            
+            plt.plot(x_values, average_kernel_based, color='g', label='Average')
+            plt.fill_between(x_values, average_kernel_based - variance_kernel_based, average_kernel_based + variance_kernel_based, color='g', alpha=alpha, label='Variance')
+            
+            plt.legend()
+            plt.xlabel('$f [Hz]$')
+            plt.ylabel('$NMSE [dB]$')
+            plt.xscale('log')
+            plt.xticks(tick_values, tick_values)
+            plt.grid(which='both', linestyle='-', linewidth=0.5, color='gray')
+            plot_file_path = os.path.join(data_path, f'final_plot_{calcolate}_average_variance.png')
+            plt.savefig(plot_file_path)
+            
+            plt.show()
             
             # plot2pgf([frequencies, nmse_5_kernel], 'nmse_5_kernel', folder='results_rebuttal/pgfplots_001')
             # plot2pgf([frequencies, nmse_15_kernel], 'nmse_15_kernel', folder='results_rebuttal/pgfplots_001')
