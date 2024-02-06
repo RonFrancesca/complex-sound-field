@@ -193,10 +193,6 @@ def main():
 
     else:
         calcolate = 'magnitude'
-        average_data_our_network = []
-        average_data_lluis = []
-        average_data_kernel_based = []
-        
         
         for num_mics in [5, 15, 35, 55]:
             
@@ -210,6 +206,11 @@ def main():
             plt.figure(figsize=(14, 10))
             
             T60_list = [0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6]
+            
+            average_data_our_network = []
+            average_data_lluis = []
+            average_data_kernel_based = []
+        
             
             
             colors = ['-c', '-m', '-y', '-k', '-g', '-b', '-r']
