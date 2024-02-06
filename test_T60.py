@@ -46,11 +46,13 @@ def main():
     args = parser.parse_args()
 
     config_path = args.config
+    config_path = '/nas/home/fronchini/complex-sound-field/models/eusipco_large_16/config.json'
     # Load configuration
     if not os.path.exists(config_path):
         print('Error: No configuration file present at specified path.')
         return
 
+    
     config = utils.load_config(config_path)
     print('Loaded configuration from: %s' % config_path)
     
@@ -69,23 +71,29 @@ def main():
 
     # Use glob to get a list of sub-folders
     
-    test_set_list = glob.glob(os.path.join(cfg_dataset["test_path"], '*'))
+    # "test_path": "/nas/home/fronchini/sound-field-neural-network/datasets/real_soundfields",
+    
+    #test_set_list = glob.glob(os.path.join(cfg_dataset["test_path"], '*'))
     
     # Filter out non-directory entries
-    test_set_list = [folder for folder in test_set_list if os.path.isdir(folder)]
+    #test_set_list = [folder for folder in test_set_list if os.path.isdir(folder)]
     
-    num_mics_list = cfg_dataset["num_mics_list"][2:3]
+    
+    #num_mics_list = cfg_dataset["num_mics_list"][2:3]   
+    num_mics_list = [5]
     print(f"Considering the following number of microphones: {num_mics_list}")
-    
     
     for num_mics in num_mics_list:
         print(f'Computing for: {num_mics} microphones')
-        for current_test_path in test_set_list:
-            print(current_test_path)
-            T60 = (current_test_path.split("/")[-1]).split("_")[-1]
+        
+        # in case of multiple T60 in simulated data:
+        #for current_test_path in test_set_list:
+        for idx in range(1):
+            #print(current_test_path)
+            #T60 = (current_test_path.split("/")[-1]).split("_")[-1]
 
-            print(f'Computing for T60 = {T60}')
-            sf_test = SoundFieldDataset(dataset_folder=current_test_path, xSample=cfg_dataset["xSamples"],
+            #print(f'Computing for T60 = {T60}')
+            sf_test = SoundFieldDataset(dataset_folder=cfg_dataset["test_path"], xSample=cfg_dataset["xSamples"],
                                         ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"],do_test=True, num_mics=num_mics, do_normalize=do_normalize)
 
             test_loader = torch.utils.data.DataLoader(sf_test,
@@ -93,7 +101,6 @@ def main():
                                                         num_workers=0,  # torch.cuda.device_count() *4,  ## ??
                                                         batch_size=test_batch_size,
                                                         pin_memory=True)
-
 
             # inference time loop
             model = sfun.ComplexUnet(config["training"])
@@ -139,49 +146,49 @@ def main():
                     results_dic['ssim'].append(ssim_metric)
 
                     
-                    if do_plot:
-                        n_freq = 10
-                        plt.figure(figsize=(10, 5))
-                        plt.subplot(131)
-                        plt.title('Input')
-                        plt.imshow(np.abs(input_data.cpu().numpy()[0, n_freq]),
-                                    aspect='auto'), plt.colorbar(), plt.tight_layout()
-                        plt.xlabel('$x [m]$'), plt.ylabel('$y [m] $'),
-                        plt.subplot(132)
-                        plt.title('Estimated')
-                        plt.imshow(np.abs(y_pred.cpu().numpy()[0, n_freq]), aspect='auto'), plt.colorbar(), plt.tight_layout()
-                        plt.xlabel('$x [m]$'), plt.ylabel('$y [m] $'),
-                        plt.subplot(133)
-                        plt.title('GT')
-                        plt.imshow(np.abs(y_true.cpu().numpy()[0, n_freq]),
-                                    aspect='auto'), plt.colorbar(), plt.tight_layout()
-                        plt.xlabel('$x [m]$'), plt.ylabel('$y [m] $'),
-                        plt.show()
+                    # if do_plot:
+                    #     n_freq = 10
+                    #     plt.figure(figsize=(10, 5))
+                    #     plt.subplot(131)
+                    #     plt.title('Input')
+                    #     plt.imshow(np.abs(input_data.cpu().numpy()[0, n_freq]),
+                    #                 aspect='auto'), plt.colorbar(), plt.tight_layout()
+                    #     plt.xlabel('$x [m]$'), plt.ylabel('$y [m] $'),
+                    #     plt.subplot(132)
+                    #     plt.title('Estimated')
+                    #     plt.imshow(np.abs(y_pred.cpu().numpy()[0, n_freq]), aspect='auto'), plt.colorbar(), plt.tight_layout()
+                    #     plt.xlabel('$x [m]$'), plt.ylabel('$y [m] $'),
+                    #     plt.subplot(133)
+                    #     plt.title('GT')
+                    #     plt.imshow(np.abs(y_true.cpu().numpy()[0, n_freq]),
+                    #                 aspect='auto'), plt.colorbar(), plt.tight_layout()
+                    #     plt.xlabel('$x [m]$'), plt.ylabel('$y [m] $'),
+                    #     plt.show()
                         
-                        plot_file_path = os.path.join(results_eval_path, f'{num_mics}_1.png')
-                        plt.savefig(plot_file_path) 
+                    #     plot_file_path = os.path.join(results_eval_path, f'{num_mics}_1.png')
+                    #     plt.savefig(plot_file_path) 
 
 
-                        n_freq = 5
-                        plt.figure(figsize=(10, 5))
-                        plt.subplot(131)
-                        plt.title('Input')
-                        plt.imshow(np.angle(input_data.cpu().numpy()[0, n_freq]),
-                                    aspect='auto'), plt.colorbar(), plt.tight_layout()
-                        plt.xlabel('$x [m]$'), plt.ylabel('$y [m] $'),
-                        plt.subplot(132)
-                        plt.title('Estimated')
-                        plt.imshow(np.angle(y_pred.cpu().numpy()[0, n_freq]), aspect='auto'), plt.colorbar(), plt.tight_layout()
-                        plt.xlabel('$x [m]$'), plt.ylabel('$y [m] $'),
-                        plt.subplot(133)
-                        plt.title('GT')
-                        plt.imshow(np.angle(y_true.cpu().numpy()[0, n_freq]),
-                                    aspect='auto'), plt.colorbar(), plt.tight_layout()
-                        plt.xlabel('$x [m]$'), plt.ylabel('$y [m] $'),
-                        plt.show()
+                    #     n_freq = 5
+                    #     plt.figure(figsize=(10, 5))
+                    #     plt.subplot(131)
+                    #     plt.title('Input')
+                    #     plt.imshow(np.angle(input_data.cpu().numpy()[0, n_freq]),
+                    #                 aspect='auto'), plt.colorbar(), plt.tight_layout()
+                    #     plt.xlabel('$x [m]$'), plt.ylabel('$y [m] $'),
+                    #     plt.subplot(132)
+                    #     plt.title('Estimated')
+                    #     plt.imshow(np.angle(y_pred.cpu().numpy()[0, n_freq]), aspect='auto'), plt.colorbar(), plt.tight_layout()
+                    #     plt.xlabel('$x [m]$'), plt.ylabel('$y [m] $'),
+                    #     plt.subplot(133)
+                    #     plt.title('GT')
+                    #     plt.imshow(np.angle(y_true.cpu().numpy()[0, n_freq]),
+                    #                 aspect='auto'), plt.colorbar(), plt.tight_layout()
+                    #     plt.xlabel('$x [m]$'), plt.ylabel('$y [m] $'),
+                    #     plt.show()
                         
-                        plot_file_path = os.path.join(results_eval_path, f'{num_mics}_2.png')
-                        plt.savefig(plot_file_path) 
+                    #     plot_file_path = os.path.join(results_eval_path, f'{num_mics}_2.png')
+                    #     plt.savefig(plot_file_path) 
                 # idx = idx +1
                 # if idx == 10:
                 #     break
@@ -204,8 +211,6 @@ def main():
             np.save(filename_path, average_ssim, allow_pickle=False)
 
             x_values = frequencies
-            #tick_values = [30, 40, 50, 60, 70, 80, 90, 100, 200, 300]
-            tick_values = [30, 40, 50, 60, 70, 80, 90, 100, 200, 300]
 
             # calculate the NMSE
             plt.figure(figsize=(14, 10))

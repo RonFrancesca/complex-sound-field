@@ -192,130 +192,155 @@ def main():
             plt.show()
 
     else:
-        num_mics = 35
-        model_name = config["training"]["session_id"]
-        data_path = os.path.join(base_dir, 'models', str(model_name), 'results', 'T60', f"n_mics_{num_mics}")
+        calcolate = 'magnitude'
         
-        tick_values = [30, 40, 50, 60, 70, 80, 90, 100, 200, 300]
-        frequencies = utils.get_frequencies()
-        x_values = frequencies
-        
-        plt.figure(figsize=(14, 10))
-        # plt.plot(x_values, nmse_5_cxn,'-r')
-        # plt.plot(x_values, nmse_15_cxn,'-g')
-        # plt.plot(x_values, nmse_35_cxn,'-b')
-        # plt.plot(x_values, nmse_55_cxn,'-m')
-        
-        
-        T60_list = [0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6]
-        nmse_T60_cxn_list = []
-        colors = ['-c', '-m', '-y', '-k', '-g', '-b', '-r']
-        
-        
-        #ipdb.set_trace()
-        for T60, color in zip(T60_list, colors):
-            filename = os.path.join(data_path,f'nmse_complex_{T60}.npy')
-            nsme_T60_tmp = np.load(os.path.join(data_path,f'nmse_complex_{T60}.npy'))
-            nmse_T60_cxn_list.append(nsme_T60_tmp)
-            plt.plot(x_values, nsme_T60_tmp, color)
+        for num_mics in [5, 15, 35, 55]:
             
-            # nmse_5_cxn = np.load(os.path.join(data_path,'nmse_complex_5.npy'))
-            # nmse_15_cxn = np.load(os.path.join(data_path,'nmse_complex_15.npy'))
-            # nmse_35_cxn = np.load(os.path.join(data_path,'nmse_complex_35.npy'))
-            # nmse_55_cxn = np.load(os.path.join(data_path,'nmse_complex_55.npy'))
-        
-        # lluis model
-        # lluis_path ='/nas/home/lcomanducci/cxz/SR_ICASSP/sound-field-neural-network/sessions/session_4/simulated_data_evaluation/min_mics_5_max_mics_65_step_mics_10'
-        # nmse_5_lluis = np.load(os.path.join(lluis_path,'nmse_lluis_5.npy'))
-        # nmse_15_lluis = np.load(os.path.join(lluis_path,'nmse_lluis_15.npy'))
-        # nmse_35_lluis = np.load(os.path.join(lluis_path,'nmse_lluis_35.npy'))
-        # nmse_55_lluis = np.load(os.path.join(lluis_path,'nmse_lluis_55.npy'))
-
-        # kernel based
-        # kernel_path ='/nas/home/lcomanducci/cxz/SR_ICASSP/complex-sound-field/results_rebuttal'
-        # nmse_5_kernel = np.load(os.path.join(kernel_path, 'nmse_sim_sig_proc_5_reg_0.1_.npy'))
-        # nmse_15_kernel = np.load(os.path.join(kernel_path, 'nmse_sim_sig_proc_15_reg_0.1_.npy'))
-        # nmse_35_kernel = np.load(os.path.join(kernel_path, 'nmse_sim_sig_proc_35_reg_0.1_.npy'))
-        # nmse_55_kernel = np.load(os.path.join(kernel_path, 'nmse_sim_sig_proc_55_reg_0.1_.npy'))
-        
-        # nmse_5_kernel_complex = np.load(os.path.join(kernel_path, 'nmse_5_sig_proc_COMPLEX_reg_0.1.npy'))
-        # nmse_15_kernel_complex = np.load(os.path.join(kernel_path, 'nmse_15_sig_proc_COMPLEX_reg_0.1_.npy'))
-        # nmse_35_kernel_complex = np.load(os.path.join(kernel_path, 'nmse_35_sig_proc_COMPLEX_reg_0.1_.npy'))
-        # nmse_55_kernel_complex = np.load(os.path.join(kernel_path, 'nmse_55_sig_proc_COMPLEX_reg_0.1_.npy'))
-
-        # plot2pgf([frequencies, nmse_5_kernel], 'nmse_5_kernel', folder='results_rebuttal/pgfplots_001')
-        # plot2pgf([frequencies, nmse_15_kernel], 'nmse_15_kernel', folder='results_rebuttal/pgfplots_001')
-        # plot2pgf([frequencies, nmse_35_kernel], 'nmse_35_kernel', folder='results_rebuttal/pgfplots_001')
-        # plot2pgf([frequencies, nmse_55_kernel], 'nmse_55_kernel', folder='results_rebuttal/pgfplots_001')
-
-        # plot2pgf([frequencies, nmse_5_kernel_complex], 'nmse_complex_5_kernel', folder='results_rebuttal/pgfplots')
-        # plot2pgf([frequencies, nmse_15_kernel_complex], 'nmse_complex_15_kernel', folder='results_rebuttal/pgfplots')
-        # plot2pgf([frequencies, nmse_35_kernel_complex], 'nmse_complex_35_kernel', folder='results_rebuttal/pgfplots')
-        # plot2pgf([frequencies, nmse_55_kernel_complex], 'nmse_complex_55_kernel', folder='results_rebuttal/pgfplots')
-
-        
-
-        # calculate the NMSE
-        # plt.figure(figsize=(14, 10))
-        # plt.plot(x_values, nmse_5_cxn,'-r')
-        # plt.plot(x_values, nmse_15_cxn,'-g')
-        # plt.plot(x_values, nmse_35_cxn,'-b')
-        # plt.plot(x_values, nmse_55_cxn,'-m')
-
-        # plt.plot(x_values, 10*np.log10(np.mean(nmse_5_lluis,axis=0)),'--r')
-        # plt.plot(x_values, 10*np.log10(np.mean(nmse_15_lluis,axis=0)),'--g')
-        # plt.plot(x_values, 10*np.log10(np.mean(nmse_35_lluis,axis=0)),'--b')
-        # plt.plot(x_values, 10*np.log10(np.mean(nmse_55_lluis,axis=0)),'--m')
-
-        # plt.plot(x_values, nmse_5_kernel,'-*r')
-        # plt.plot(x_values, nmse_15_kernel,'-*g')
-        # plt.plot(x_values, nmse_35_kernel,'-*b')
-        # plt.plot(x_values, nmse_55_kernel,'-*m')
-
-
-        plt.xscale('log')
-        plt.xticks(tick_values, tick_values)
-        plt.xlabel('$f [Hz]$'), plt.ylabel('$NMSE [dB]$')#, plt.title('$\text{NMSE estimated from simulated data}$')
-        plt.grid(which='both', linestyle='-', linewidth=0.5, color='gray')
-        #plt.legend(['5 $\mathrm{CxNet}$','15 $\mathrm{CxNet}$','35 $\mathrm{CxNet}$','55 $\mathrm{CxNet}$','5 $\mathrm{lluis}$','15 $\mathrm{lluis}$','35 $\mathrm{lluis}$','55 $\mathrm{lluis}$','5 $\mathrm{kernel}$','15 $\mathrm{kernel}$',])
-        plt.legend(T60_list)
-
-        plt.show()
-        
-        plot_file_path = os.path.join(data_path, 'final_plot.png')
-        plt.savefig(plot_file_path)
-        #plt.savefig(os.path.join('/nas/home/lcomanducci/cxz/SR_ICASSP/complex-sound-field/plots','nmse_'+config["training"]["session_id"]+'.png'))
-        do_save_plot = False
-
-        if do_save_plot:
-            plot2pgf([frequencies, nmse_5_cxn], 'nmse_5_cxn', folder='results')
-            plot2pgf([frequencies, nmse_15_cxn], 'nmse_15_cxn', folder='results')
-            plot2pgf([frequencies, nmse_35_cxn], 'nmse_35_cxn', folder='results')
-            plot2pgf([frequencies, nmse_55_cxn], 'nmse_55_cxn', folder='results')
-
-            """
-            plot2pgf([frequencies, 10*np.log10(np.mean(nmse_5_lluis,axis=0))], 'nmse_5_lluis', folder='results')
-            plot2pgf([frequencies, 10*np.log10(np.mean(nmse_15_lluis,axis=0))], 'nmse_15_lluis', folder='results')
-            plot2pgf([frequencies, 10*np.log10(np.mean(nmse_35_lluis,axis=0))], 'nmse_35_lluis', folder='results')
-            plot2pgf([frequencies, 10*np.log10(np.mean(nmse_55_lluis,axis=0))], 'nmse_55_lluis', folder='results')
-            """
-            # Do the same with complex NMSE
             model_name = config["training"]["session_id"]
-            data_path ='/nas/home/lcomanducci/cxz/SR_ICASSP/complex-sound-field/models/'+str(model_name)+'/results'
-            nmse_5_cxn = np.load(os.path.join(data_path,'nmse_complex_COMPLEX_5.npy'))
-            nmse_15_cxn = np.load(os.path.join(data_path,'nmse_complex_COMPLEX_15.npy'))
-            nmse_35_cxn = np.load(os.path.join(data_path,'nmse_complex_COMPLEX_35.npy'))
-            nmse_55_cxn = np.load(os.path.join(data_path,'nmse_complex_COMPLEX_55.npy'))
-            plot2pgf([frequencies, nmse_5_cxn], 'nmse_5_cxn_COMPLEX', folder='results')
-            plot2pgf([frequencies, nmse_15_cxn], 'nmse_15_cxn_COMPLEX', folder='results')
-            plot2pgf([frequencies, nmse_35_cxn], 'nmse_35_cxn_COMPLEX', folder='results')
-            plot2pgf([frequencies, nmse_55_cxn], 'nmse_55_cxn_COMPLEX', folder='results')
+            data_path = os.path.join(base_dir, 'models', str(model_name), 'results', 'T60', f"n_mics_{num_mics}")
+            
+            tick_values = [30, 40, 50, 60, 70, 80, 90, 100, 200, 300]
+            frequencies = utils.get_frequencies()
+            x_values = frequencies
+            
+            plt.figure(figsize=(14, 10))
+            
+            T60_list = [0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6]
+            
+            colors = ['-c', '-m', '-y', '-k', '-g', '-b', '-r']
+            colors_kernel = ['-*c', '-*m', '-*y', '-*k', '-*g', '-*b', '-*r']
+            colors_lluis = ['--c', '--m', '--y', '--k', '--g', '--b', '--r']
+            
+            
+            kernel_path ='/nas/home/lcomanducci/cxz/SR_ICASSP/complex-sound-field/results_eusipco'
+            lluis_path = '/nas/home/fronchini/sound-field-neural-network/sessions/session_04-16-bs32/real_data_evaluation/min_mics_5_max_mics_65_step_mics_5'
+            
+            
+            if calcolate == 'magnitude':
+                for idx, T60 in enumerate(T60_list):
+                    # our network
+                    # nsme_T60_tmp = np.load(os.path.join(data_path, f'nmse_complex_{T60}.npy'))
+                    # plt.plot(x_values, nsme_T60_tmp, colors[idx])
+                    
+                    # lluis network
+                    #lluis_path_tmp = os.path.join(lluis_path, f'T60_{T60}')
+                    lluis_path = os.path.join(lluis_path)
+                    nmse_T60_lluis_tmp = np.load(os.path.join(lluis_path, f'nmse_lluis_{num_mics}.npy'))
+                    plt.plot(x_values, 10*np.log10(np.mean(nmse_T60_lluis_tmp,axis=0)), colors_lluis[idx])
+                    
+                    # kernel based
+                    # T
+                    
+                plt.legend([
+                    '0.4 $\mathrm{CxNet}$',
+                    '0.4 $\mathrm{LLuis}$',
+                    '0.4 $\mathrm{kernel}$',
+                    '0.6 $\mathrm{CxNet}$',
+                    '0.6 $\mathrm{LLuis}$',
+                    '0.6 $\mathrm{kernel}$',
+                    '0.8 $\mathrm{CxNet}$',
+                    '0.8 $\mathrm{LLuis}$',
+                    '0.8 $\mathrm{kernel}$',
+                    '1 $\mathrm{CxNet}$',
+                    '1 $\mathrm{LLuis}$',
+                    '1 $\mathrm{kernel}$',
+                    '1.2 $\mathrm{CxNet}$',
+                    '1.2 $\mathrm{LLuis}$',
+                    '1.2 $\mathrm{kernel}$',
+                    '1.4 $\mathrm{CxNet}$',
+                    '1.4 $\mathrm{LLuis}$',
+                    '1.4 $\mathrm{kernel}$',
+                    '1.6 $\mathrm{CxNet}$',
+                    '1.6 $\mathrm{LLuis}$',
+                    '1.6 $\mathrm{kernel}$',
+                ])
+                
+            
+            elif calcolate == 'complex':
+                
+                for idx, T60 in enumerate(T60_list):
+                    # our network
+                    nsme_T60_tmp = np.load(os.path.join(data_path,f'nmse_complex_COMPLEX_{T60}.npy'))
+                    plt.plot(x_values, nsme_T60_tmp, colors[idx])
+                    
+                    # kernel based
+                    nsme_T60_kernel_tmp = np.load(os.path.join(kernel_path, f'nmse_sim_sig_proc_COMPLEX{num_mics}_mics_reg_0.1_t60_{T60}_.npy'))
+                    plt.plot(x_values, nsme_T60_kernel_tmp, colors_kernel[idx])
+                    
+                plt.legend([
+                    '0.4 $\mathrm{CxNet}$',
+                    '0.4 $\mathrm{kernel}$',
+                    '0.6 $\mathrm{CxNet}$',
+                    '0.6 $\mathrm{kernel}$',
+                    '0.8 $\mathrm{CxNet}$',
+                    
+                    '0.8 $\mathrm{kernel}$',
+                    '1 $\mathrm{CxNet}$',
+                    
+                    '1 $\mathrm{kernel}$',
+                    '1.2 $\mathrm{CxNet}$',
+                    
+                    '1.2 $\mathrm{kernel}$',
+                    '1.4 $\mathrm{CxNet}$',
+                    
+                    '1.4 $\mathrm{kernel}$',
+                    '1.6 $\mathrm{CxNet}$',
+                    
+                    '1.6 $\mathrm{kernel}$',
+                ])
+                
+                
+                    
+            plt.xscale('log')
+            plt.xticks(tick_values, tick_values)
+            plt.xlabel('$f [Hz]$'), plt.ylabel('$NMSE [dB]$')#, plt.title('$\text{NMSE estimated from simulated data}$')
+            plt.grid(which='both', linestyle='-', linewidth=0.5, color='gray')
+                
+            plt.show()
+                
+            plot_file_path = os.path.join(data_path, f'final_plot_{calcolate}_real.png')
+            plt.savefig(plot_file_path)
+            plt.close() 
+            
+            # plot2pgf([frequencies, nmse_5_kernel], 'nmse_5_kernel', folder='results_rebuttal/pgfplots_001')
+            # plot2pgf([frequencies, nmse_15_kernel], 'nmse_15_kernel', folder='results_rebuttal/pgfplots_001')
+            # plot2pgf([frequencies, nmse_35_kernel], 'nmse_35_kernel', folder='results_rebuttal/pgfplots_001')
+            # plot2pgf([frequencies, nmse_55_kernel], 'nmse_55_kernel', folder='results_rebuttal/pgfplots_001')
 
+            # plot2pgf([frequencies, nmse_5_kernel_complex], 'nmse_complex_5_kernel', folder='results_rebuttal/pgfplots')
+            # plot2pgf([frequencies, nmse_15_kernel_complex], 'nmse_complex_15_kernel', folder='results_rebuttal/pgfplots')
+            # plot2pgf([frequencies, nmse_35_kernel_complex], 'nmse_complex_35_kernel', folder='results_rebuttal/pgfplots')
+            # plot2pgf([frequencies, nmse_55_kernel_complex], 'nmse_complex_55_kernel', folder='results_rebuttal/pgfplots')            
+            
+            # do_save_plot = False
 
+            # if do_save_plot:
+            #     plot2pgf([frequencies, nmse_5_cxn], 'nmse_5_cxn', folder='results')
+            #     plot2pgf([frequencies, nmse_15_cxn], 'nmse_15_cxn', folder='results')
+            #     plot2pgf([frequencies, nmse_35_cxn], 'nmse_35_cxn', folder='results')
+            #     plot2pgf([frequencies, nmse_55_cxn], 'nmse_55_cxn', folder='results')
 
-        #plot2pgf([frequencies, 10*np.log10(np.mean(nmse_5_lluis,axis=0))], 'nmse_pwd_freq_db_missing_'+str(n_missing), folder=pgf_dataset_path)
+            #     """
+            #     plot2pgf([frequencies, 10*np.log10(np.mean(nmse_5_lluis,axis=0))], 'nmse_5_lluis', folder='results')
+            #     plot2pgf([frequencies, 10*np.log10(np.mean(nmse_15_lluis,axis=0))], 'nmse_15_lluis', folder='results')
+            #     plot2pgf([frequencies, 10*np.log10(np.mean(nmse_35_lluis,axis=0))], 'nmse_35_lluis', folder='results')
+            #     plot2pgf([frequencies, 10*np.log10(np.mean(nmse_55_lluis,axis=0))], 'nmse_55_lluis', folder='results')
+            #     """
+            #     # Do the same with complex NMSE
+            #     model_name = config["training"]["session_id"]
+            #     data_path ='/nas/home/lcomanducci/cxz/SR_ICASSP/complex-sound-field/models/'+str(model_name)+'/results'
+            #     nmse_5_cxn = np.load(os.path.join(data_path,'nmse_complex_COMPLEX_5.npy'))
+            #     nmse_15_cxn = np.load(os.path.join(data_path,'nmse_complex_COMPLEX_15.npy'))
+            #     nmse_35_cxn = np.load(os.path.join(data_path,'nmse_complex_COMPLEX_35.npy'))
+            #     nmse_55_cxn = np.load(os.path.join(data_path,'nmse_complex_COMPLEX_55.npy'))
+            #     plot2pgf([frequencies, nmse_5_cxn], 'nmse_5_cxn_COMPLEX', folder='results')
+            #     plot2pgf([frequencies, nmse_15_cxn], 'nmse_15_cxn_COMPLEX', folder='results')
+            #     plot2pgf([frequencies, nmse_35_cxn], 'nmse_35_cxn_COMPLEX', folder='results')
+            #     plot2pgf([frequencies, nmse_55_cxn], 'nmse_55_cxn_COMPLEX', folder='results')
 
-        print('s')
+            #plot2pgf([frequencies, 10*np.log10(np.mean(nmse_5_lluis,axis=0))], 'nmse_pwd_freq_db_missing_'+str(n_missing), folder=pgf_dataset_path)
+
+            print(f'Saved {num_mics} results')
 
 if __name__ == '__main__':
     main()
