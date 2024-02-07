@@ -312,31 +312,33 @@ def main():
             
             
             # average and variance proposed method
-            
-            average_our_network = np.mean(average_data_our_network, axis=0) 
-            variance_our_network = np.var(average_data_our_network, axis=0)
+            average_ronchini = np.mean(average_data_our_network, axis=0) 
+            variance_our_network = np.std(average_data_our_network, axis=0)
+            se_ronchini = np.std(average_data_our_network, axis=0) / np.sqrt(len(average_data_our_network))
             
             # average and variance lluis network
             average_lluis = np.mean(average_data_lluis, axis=0) 
-            variance_lluis = np.var(average_data_lluis, axis=0)
+            variance_lluis = np.std(average_data_lluis, axis=0)
+            se_lluis = np.std(average_data_lluis, axis=0) / np.sqrt(len(average_data_lluis))
             
             # average and variance kernel based network
             average_kernel_based = np.mean(average_data_kernel_based, axis=0) 
-            variance_kernel_based = np.var(average_data_kernel_based, axis=0)
+            variance_kernel_based = np.std(average_data_kernel_based, axis=0)
+            se_kernel_based = np.std(average_data_kernel_based, axis=0) / np.sqrt(len(average_data_kernel_based))
             
             
             # Plot average and variance
             
             plt.figure(figsize=(14, 10))
             alpha = 0.5
-            plt.plot(x_values, average_our_network, color='b', label='Average')
-            plt.fill_between(x_values, average_our_network - variance_our_network, average_our_network + variance_our_network, color='b', alpha=alpha, label='Variance')
+            plt.plot(x_values, average_ronchini, color='b', label='Average')
+            plt.fill_between(x_values, average_ronchini - variance_our_network, average_ronchini + variance_our_network, color='b', alpha=alpha, label='Std')
             
             plt.plot(x_values, average_lluis, color='orange', label='Average')
-            plt.fill_between(x_values, average_lluis - variance_lluis, average_lluis + variance_lluis, color='orange', alpha=alpha, label='Variance')
+            plt.fill_between(x_values, average_lluis - variance_lluis, average_lluis + variance_lluis, color='orange', alpha=alpha, label='Std')
             
             plt.plot(x_values, average_kernel_based, color='g', label='Average')
-            plt.fill_between(x_values, average_kernel_based - variance_kernel_based, average_kernel_based + variance_kernel_based, color='g', alpha=alpha, label='Variance')
+            plt.fill_between(x_values, average_kernel_based - variance_kernel_based, average_kernel_based + variance_kernel_based, color='g', alpha=alpha, label='Std')
             
             plt.legend()
             plt.xlabel('$f [Hz]$')
@@ -344,7 +346,7 @@ def main():
             plt.xscale('log')
             plt.xticks(tick_values, tick_values)
             plt.grid(which='both', linestyle='-', linewidth=0.5, color='gray')
-            plot_file_path = os.path.join(data_path, f'final_plot_{calcolate}_average_variance.png')
+            plot_file_path = os.path.join(data_path, f'final_plot_{calcolate}_average_std.png')
             plt.savefig(plot_file_path)
             
             plt.show()

@@ -89,7 +89,6 @@ class SoundFieldDataset(Dataset):
         mat = scipy.io.loadmat(sf_item)
         
         f_response_complex = mat['FrequencyResponse'].astype(np.complex64)
-        
 
         f_response_complex = np.transpose(f_response_complex, (1, 0, 2))
 
