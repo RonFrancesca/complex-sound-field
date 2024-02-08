@@ -194,13 +194,19 @@ def main():
             plt.show()
 
     else:
-        calculate = 'magnitude'
+        calculate = 'complex'
+        
         for T60 in [0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6]:
+            
+            plt.figure(figsize=(14, 10))
+
             model_name = config["training"]["session_id"]
             
             # results path folders
             data_path = os.path.join(base_dir, 'models', model_name, 'results', f'n_mics/T60_{T60}')
-            lluis_path = f'/nas/home/fronchini/sound-field-neural-network/sessions/session_04-16-bs32/simulated_data_evaluation/min_mics_5_max_mics_65_step_mics_5/T60_{T60}'
+            
+            # lluis and kernel based path
+            lluis_path = f'/nas/home/fronchini/sound-field-neural-network/sessions/session_04-16-bs4/simulated_data_evaluation/min_mics_5_max_mics_65_step_mics_5/T60_{T60}'
             kernel_path ='/nas/home/lcomanducci/cxz/SR_ICASSP/complex-sound-field/results_eusipco'
             
             plt.figure(figsize=(14, 10))
@@ -217,65 +223,49 @@ def main():
             # nmse per number of microphone for magnitude
             if calculate == 'magnitude':
                 
+                
+                plot_filename = f'results_abs_T60_{T60}.pdf'
+                
                 for idx, num_mics in enumerate([5, 15, 35, 55]):
                     # our network
-                    # nmse_cxn_tmp = np.load(os.path.join(data_path, f'nmse_complex_{num_mics}.npy'))
-                    # plt.plot(x_values, nmse_cxn_tmp, colors[idx])
+                    nmse_cxn_tmp = np.load(os.path.join(data_path, f'nmse_complex_{num_mics}.npy'))
+                    plt.plot(x_values, nmse_cxn_tmp, colors[idx], label=f'mics = {num_mics}')
                     
                     # lluis model
                     nmse_lluis_tmp = np.load(os.path.join(lluis_path, f'nmse_lluis_{num_mics}.npy'))
-                    plt.plot(x_values, 10*np.log10(np.mean(nmse_lluis_tmp,axis=0)), colors_lluis[idx])
+                    plt.plot(x_values, 10*np.log10(np.mean(nmse_lluis_tmp,axis=0)), colors_lluis[idx], label=None)
                     
                     # kernel based
-                    # nsme_T60_kernel_tmp = np.load(os.path.join(kernel_path, f'nmse_sim_sig_proc_{num_mics}_mics_reg_0.1_t60_{T60}_.npy'))
-                    # plt.plot(x_values, nsme_T60_kernel_tmp, colors_kernel[idx])
+                    nsme_T60_kernel_tmp = np.load(os.path.join(kernel_path, f'nmse_sim_sig_proc_{num_mics}_mics_reg_0.1_t60_{T60}_.npy'))
+                    plt.plot(x_values, nsme_T60_kernel_tmp, colors_kernel[idx], label=None)
                 
-                plt.legend([
-                '5 $\mathrm{CxNet}$',
-                '5 $\mathrm{Lluis}$',
-                '5 $\mathrm{kernel}$',
-                '15 $\mathrm{CxNet}$',
-                '15 $\mathrm{Lluis}$',
-                '15 $\mathrm{kernel}$',
-                '35 $\mathrm{CxNet}$',
-                '35 $\mathrm{Lluis}$',
-                '35 $\mathrm{kernel}$',
-                '55 $\mathrm{CxNet}$',
-                '55 $\mathrm{Lluis}$',
-                '55 $\mathrm{kernel}$',])
-            
+                plt.legend()
+                           
             elif calculate == 'complex':
+                
+                
+                plot_filename = f'results_complex_T60_{T60}.pdf'
                 
                 for idx, num_mics in enumerate([5, 15, 35, 55]):
                     # our network
                     nmse_cxn_tmp = np.load(os.path.join(data_path, f'nmse_complex_COMPLEX_{num_mics}.npy'))
-                    plt.plot(x_values, nmse_cxn_tmp, colors[idx])
+                    plt.plot(x_values, nmse_cxn_tmp, colors[idx], label=f'mics = {num_mics}')
                     
                     # kernel based
                     nsme_T60_kernel_tmp = np.load(os.path.join(kernel_path, f'nmse_sim_sig_proc_COMPLEX{num_mics}_mics_reg_0.1_t60_{T60}_.npy'))
-                    plt.plot(x_values, nsme_T60_kernel_tmp, colors_kernel[idx])
+                    plt.plot(x_values, nsme_T60_kernel_tmp, colors_kernel[idx], label=None)
                 
-                plt.legend([
-                '5 $\mathrm{CxNet}$',
-                '5 $\mathrm{kernel}$',
-                '15 $\mathrm{CxNet}$',
-                '15 $\mathrm{kernel}$',
-                '35 $\mathrm{CxNet}$',
-                '35 $\mathrm{kernel}$',
-                '55 $\mathrm{CxNet}$',
-                '55 $\mathrm{kernel}$',])
+                plt.legend()
 
             
             plt.xscale('log')
             plt.xticks(tick_values, tick_values)
             plt.xlabel('$f [Hz]$'), plt.ylabel('$NMSE [dB]$')#, plt.title('$\text{NMSE estimated from simulated data}$')
             plt.grid(which='both', linestyle='-', linewidth=0.5, color='gray')
-            
             plt.show()
-            
-            plot_file_path = os.path.join(data_path, f'final_plot_{calculate}_real.png')
+            plot_file_path = os.path.join(data_path, plot_filename)
             plt.savefig(plot_file_path)
-            print(f'Saved {T60} results file')
+            print(f'Saved {T60} results file! :)')
             plt.close()
             
             
