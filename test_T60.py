@@ -165,12 +165,12 @@ def main():
             np.save(filename_path, average_nsme_complex, allow_pickle=False)
             
             # save the std for nmse 
-            filename_path = os.path.join(results_eval_path, f'std_complex_{T60}.npy')
-            np.save(filename_path, std_abs, allow_pickle=False)
+            # filename_path = os.path.join(results_eval_path, f'std_complex_{T60}.npy')
+            # np.save(filename_path, std_abs, allow_pickle=False)
             
-            # # save the std for nmse for complex values
-            filename_path = os.path.join(results_eval_path, f'std_complex_COMPLEX_{T60}.npy')
-            np.save(filename_path, std_complex, allow_pickle=False)
+            # # # save the std for nmse for complex values
+            # filename_path = os.path.join(results_eval_path, f'std_complex_COMPLEX_{T60}.npy')
+            # np.save(filename_path, std_complex, allow_pickle=False)
             
             
             average_ssim = np.mean(results_dic['ssim'], axis=0)
