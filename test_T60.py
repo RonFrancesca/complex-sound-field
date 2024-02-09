@@ -46,7 +46,7 @@ def main():
     args = parser.parse_args()
 
     config_path = args.config
-    config_path = '/nas/home/fronchini/complex-sound-field/models/eusipco_large_16/config.json'
+    
     # Load configuration
     if not os.path.exists(config_path):
         print('Error: No configuration file present at specified path.')
@@ -58,7 +58,7 @@ def main():
     
     base_dir = config["dataset"]["base_dir"]
     do_plot = False
-    
+   
 
     # Imports to select GPU
     os.environ['CUDA_ALLOW_GROWTH'] = 'True'
@@ -83,17 +83,20 @@ def main():
     num_mics_list = [5]
     print(f"Considering the following number of microphones: {num_mics_list}")
     
+    ipdb.set_trace()
     for num_mics in num_mics_list:
         print(f'Computing for: {num_mics} microphones')
         
         # in case of multiple T60 in simulated data:
         #for current_test_path in test_set_list:
-        for idx in range(1):
+        for T60 in [0.4]:
             #print(current_test_path)
             #T60 = (current_test_path.split("/")[-1]).split("_")[-1]
+            test_path = os.path.join(cfg_dataset['test_path'], f'T60_{T60}')
+            
 
             #print(f'Computing for T60 = {T60}')
-            sf_test = SoundFieldDataset(dataset_folder=cfg_dataset["test_path"], xSample=cfg_dataset["xSamples"],
+            sf_test = SoundFieldDataset(dataset_folder=test_path, xSample=cfg_dataset["xSamples"],
                                         ySample=cfg_dataset["ySamples"], factor=cfg_dataset["factor"],do_test=True, num_mics=num_mics, do_normalize=do_normalize)
 
             test_loader = torch.utils.data.DataLoader(sf_test,
@@ -145,57 +148,13 @@ def main():
                     results_dic['nmse_complex'].append(nmse_complex)
                     results_dic['ssim'].append(ssim_metric)
 
-                    
-                    # if do_plot:
-                    #     n_freq = 10
-                    #     plt.figure(figsize=(10, 5))
-                    #     plt.subplot(131)
-                    #     plt.title('Input')
-                    #     plt.imshow(np.abs(input_data.cpu().numpy()[0, n_freq]),
-                    #                 aspect='auto'), plt.colorbar(), plt.tight_layout()
-                    #     plt.xlabel('$x [m]$'), plt.ylabel('$y [m] $'),
-                    #     plt.subplot(132)
-                    #     plt.title('Estimated')
-                    #     plt.imshow(np.abs(y_pred.cpu().numpy()[0, n_freq]), aspect='auto'), plt.colorbar(), plt.tight_layout()
-                    #     plt.xlabel('$x [m]$'), plt.ylabel('$y [m] $'),
-                    #     plt.subplot(133)
-                    #     plt.title('GT')
-                    #     plt.imshow(np.abs(y_true.cpu().numpy()[0, n_freq]),
-                    #                 aspect='auto'), plt.colorbar(), plt.tight_layout()
-                    #     plt.xlabel('$x [m]$'), plt.ylabel('$y [m] $'),
-                    #     plt.show()
-                        
-                    #     plot_file_path = os.path.join(results_eval_path, f'{num_mics}_1.png')
-                    #     plt.savefig(plot_file_path) 
-
-
-                    #     n_freq = 5
-                    #     plt.figure(figsize=(10, 5))
-                    #     plt.subplot(131)
-                    #     plt.title('Input')
-                    #     plt.imshow(np.angle(input_data.cpu().numpy()[0, n_freq]),
-                    #                 aspect='auto'), plt.colorbar(), plt.tight_layout()
-                    #     plt.xlabel('$x [m]$'), plt.ylabel('$y [m] $'),
-                    #     plt.subplot(132)
-                    #     plt.title('Estimated')
-                    #     plt.imshow(np.angle(y_pred.cpu().numpy()[0, n_freq]), aspect='auto'), plt.colorbar(), plt.tight_layout()
-                    #     plt.xlabel('$x [m]$'), plt.ylabel('$y [m] $'),
-                    #     plt.subplot(133)
-                    #     plt.title('GT')
-                    #     plt.imshow(np.angle(y_true.cpu().numpy()[0, n_freq]),
-                    #                 aspect='auto'), plt.colorbar(), plt.tight_layout()
-                    #     plt.xlabel('$x [m]$'), plt.ylabel('$y [m] $'),
-                    #     plt.show()
-                        
-                    #     plot_file_path = os.path.join(results_eval_path, f'{num_mics}_2.png')
-                    #     plt.savefig(plot_file_path) 
-                # idx = idx +1
-                # if idx == 10:
-                #     break
-
-
+                
             average_nsme = 10 * np.log10(np.mean(results_dic['nmse'], axis=0))
             average_nsme_complex = 10 * np.log10(np.mean(results_dic['nmse_complex'], axis=0))
+            
+            # calcolo della standard deviation 
+            std_abs = 10 * np.log10(np.std(results_dic['nmse'], axis=0))
+            std_complex = 10 * np.log10(np.std(results_dic['nmse_complex'], axis=0))
 
             # save nsme
             filename_path = os.path.join(results_eval_path, f'nmse_complex_{T60}.npy')
@@ -204,9 +163,18 @@ def main():
             # save complex nmse (ugly names)
             filename_path = os.path.join(results_eval_path, f'nmse_complex_COMPLEX_{T60}.npy')
             np.save(filename_path, average_nsme_complex, allow_pickle=False)
-
+            
+            # save the std for nmse 
+            filename_path = os.path.join(results_eval_path, f'std_complex_{T60}.npy')
+            np.save(filename_path, std_abs, allow_pickle=False)
+            
+            # # save the std for nmse for complex values
+            filename_path = os.path.join(results_eval_path, f'std_complex_COMPLEX_{T60}.npy')
+            np.save(filename_path, std_complex, allow_pickle=False)
+            
+            
             average_ssim = np.mean(results_dic['ssim'], axis=0)
-            # save nsme
+            # save ssim
             filename_path = os.path.join(results_eval_path, f'ssim_complex_{T60}.npy')
             np.save(filename_path, average_ssim, allow_pickle=False)
 
