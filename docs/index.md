@@ -1,5 +1,5 @@
 ---
-title:  Results to be added
+title:  Room Transfer Function Reconstruction Using Complex-valued Neural Networks and Irregularly Distributed Microphones.
 ---
 
-## Results will need to be added
+## Additional results will be added soon ... 
