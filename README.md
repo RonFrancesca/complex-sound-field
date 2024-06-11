@@ -7,7 +7,9 @@
 [Francesca Ronchini](https://www.linkedin.com/in/francesca-ronchini/)<sup>1</sup>, [Luca Comanducci](https://lucacoma.github.io/)<sup>1</sup>, [Mirco Pezzoli](https://www.linkedin.com/in/mirco-pezzoli/)<sup>1</sup>, [Fabio Antonacci](https://www.deib.polimi.it/ita/personale/dettagli/573870)<sup>1</sup>, and [Augusto Sarti](https://www.deib.polimi.it/eng/people/details/61414)<sup>1</sup>
 
 <sup>1</sup> Dipartimento di Elettronica, Informazione e Bioingegneria - Politecnico di Milano<br>
-    
+
+Accepted at European Signal Processing Conference (EUSIPCO) 2024
+
 [![arXiv](https://img.shields.io/badge/arXiv-2402.04866-b31b1b.svg)](https://arxiv.org/abs/2402.04866)
 
 </div>
